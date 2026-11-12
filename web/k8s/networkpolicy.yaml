@@ -1,5 +1,5 @@
-# Only the app may reach Postgres; other pods in the cluster can't connect at all.
-# k3s enforces NetworkPolicy with its built-in controller.
+# Only the app and the nightly backup job may reach Postgres; other pods in the
+# cluster can't connect at all. k3s enforces NetworkPolicy with its built-in controller.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -12,8 +12,10 @@ spec:
   ingress:
     - from:
         - podSelector:
-            matchLabels:
-              app: imagearchive
+            matchExpressions:
+              - key: app
+                operator: In
+                values: [imagearchive, imagearchive-backup]
       ports:
         - protocol: TCP
           port: 5432

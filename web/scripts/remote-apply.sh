@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Runs ON the k3s node, called by deploy.sh over `ssh -t`. Applies the manifests,
-# creating the imagearchive-secrets Secret on the first deploy.
+# creating the imagearchive-secrets Secret on the first deploy and the
+# imagearchive-backup-smb Secret (NAS sign-in) the first time backups are deployed.
 #
 # Secrets are passed to kubectl on stdin, never as command-line arguments (which any
 # user on the node could see with `ps`). The first-admin password is only needed until
@@ -31,6 +32,19 @@ if ! $K -n "$NS" get secret imagearchive-secrets >/dev/null 2>&1; then
   printf 'POSTGRES_PASSWORD=%s\nADMIN_USERNAME=%s\nADMIN_PASSWORD=%s\n' "$db_pass" "$admin_user" "$admin_pass" \
     | $K -n "$NS" create secret generic imagearchive-secrets --from-env-file=/dev/stdin
   unset admin_pass db_pass
+fi
+
+if ! $K -n "$NS" get secret imagearchive-backup-smb >/dev/null 2>&1; then
+  echo "Nightly backups: sign-in for the NAS share \\\\192.168.10.20\\K3S_Backups"
+  read -r -p "SMB username: " smb_user
+  read -r -p "SMB domain/workgroup (blank for none): " smb_domain
+  read -r -s -p "SMB password: " smb_pass
+  echo
+  {
+    printf 'SMB_USER=%s\nSMB_PASSWORD=%s\n' "$smb_user" "$smb_pass"
+    if [ -n "$smb_domain" ]; then printf 'SMB_DOMAIN=%s\n' "$smb_domain"; fi
+  } | $K -n "$NS" create secret generic imagearchive-backup-smb --from-env-file=/dev/stdin
+  unset smb_pass
 fi
 
 $K apply -k "$DIR/k8s"

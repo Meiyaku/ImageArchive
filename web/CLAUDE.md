@@ -133,5 +133,43 @@ entry, and runs `sudo k3s kubectl apply -k`. Namespace `imagearchive`.
   arguments). After a successful rollout it deletes `ADMIN_PASSWORD` from the Secret
   (the app reads it as optional). Not in git.
 
+### Backups
+
+`k8s/backup.yaml` is a CronJob (09:00 UTC daily) that copies to the NAS share
+`\\192.168.10.20\K3S_Backups`, folder `imagearchive/`, using rclone's SMB backend
+(no mounts or drivers on the node):
+
+- `database/imagearchive_<date>_<time>.sql.gz` — `pg_dump`, one per run, 30 days kept.
+- `photos/` — copy of every photo file; only new files are sent and nothing is ever
+  deleted there (photos are immutable; a replaced photo gets a new name).
+
+The NAS sign-in is the `imagearchive-backup-smb` Secret (`SMB_USER`, `SMB_PASSWORD`,
+optional `SMB_DOMAIN`), prompted for by `scripts/remote-apply.sh` the first time. The
+NetworkPolicy lets pods labelled `app: imagearchive-backup` reach Postgres.
+
+```bash
+K='sudo k3s kubectl -n imagearchive'
+$K create job --from=cronjob/imagearchive-backup backup-now   # run one now
+$K logs -f job/backup-now --all-containers                     # watch it
+$K get jobs                                                    # recent runs
+```
+
+**Restore** (into the cluster, after copying the files off the NAS to the node):
+
+```bash
+K='sudo k3s kubectl -n imagearchive'
+$K scale deployment/imagearchive --replicas=0
+# Database: wipe and load the chosen dump.
+$K exec -i postgres-0 -- psql -U imagearchive -d imagearchive -c 'DROP SCHEMA public CASCADE; CREATE SCHEMA public;'
+gunzip -c imagearchive_<date>_<time>.sql.gz | $K exec -i postgres-0 -- psql -U imagearchive -d imagearchive
+$K scale deployment/imagearchive --replicas=1
+# Photos: copy the NAS photos/ folder back into the uploads volume.
+POD=$($K get pod -l app=imagearchive -o name | head -1)
+$K cp ./photos/. ${POD#pod/}:/data/uploads
+```
+
+Changing the SMB password: `$K delete secret imagearchive-backup-smb` and redeploy
+(it prompts again).
+
 Create a user in the cluster:
 `sudo k3s kubectl -n imagearchive exec deploy/imagearchive -- node server/cli/create-user.ts <user> <pass>`

@@ -1,0 +1,131 @@
+# Nightly backup to the NAS share \\192.168.10.20\K3S_Backups, folder imagearchive/:
+#
+#   imagearchive/database/imagearchive_<UTC date>_<time>.sql.gz   one per night, 30 days kept
+#   imagearchive/photos/                                           every photo ever uploaded
+#
+# Photos never change once written (a replaced photo gets a new file name), so each run
+# only sends files the NAS doesn't have yet, and nothing is ever deleted from the NAS
+# copy. That also protects against photos deleted by mistake in the app.
+#
+# SMB credentials live in the imagearchive-backup-smb Secret, created on the first
+# deploy by scripts/remote-apply.sh. Run a backup now:
+#   sudo k3s kubectl -n imagearchive create job --from=cronjob/imagearchive-backup backup-now
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: imagearchive-backup
+  labels:
+    app: imagearchive-backup
+spec:
+  # 09:00 UTC (early morning in US time zones).
+  schedule: "0 9 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      activeDeadlineSeconds: 21600
+      template:
+        metadata:
+          labels:
+            app: imagearchive-backup
+        spec:
+          restartPolicy: Never
+          # The uploads volume is local to one node; the scheduler places this pod there
+          # automatically (local-path volumes carry node affinity).
+          volumes:
+            - name: work
+              emptyDir: {}
+            - name: uploads
+              persistentVolumeClaim:
+                claimName: imagearchive-uploads
+                readOnly: true
+          initContainers:
+            # Step 1: a consistent database snapshot. Photos are written before their
+            # database row, so every photo the dump refers to already exists for step 2.
+            - name: dump-database
+              image: postgres:17-alpine
+              env:
+                - name: PGPASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: imagearchive-secrets
+                      key: POSTGRES_PASSWORD
+              command: ["sh", "-c"]
+              args:
+                - |
+                  set -eu
+                  pg_dump -h postgres -U imagearchive -d imagearchive --no-owner --no-privileges \
+                    | gzip -9 > /work/imagearchive.sql.gz
+                  echo "Database dump: $(du -h /work/imagearchive.sql.gz | cut -f1)"
+              volumeMounts:
+                - name: work
+                  mountPath: /work
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 64Mi
+                limits:
+                  memory: 256Mi
+          containers:
+            # Step 2: copy the dump and any new photos to the NAS.
+            - name: copy-to-nas
+              image: rclone/rclone:1.75.2
+              env:
+                - name: RCLONE_CONFIG_NAS_TYPE
+                  value: smb
+                - name: RCLONE_CONFIG_NAS_HOST
+                  value: "192.168.10.20"
+                - name: SMB_SHARE
+                  value: K3S_Backups
+                - name: SMB_USER
+                  valueFrom:
+                    secretKeyRef:
+                      name: imagearchive-backup-smb
+                      key: SMB_USER
+                - name: SMB_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: imagearchive-backup-smb
+                      key: SMB_PASSWORD
+                - name: SMB_DOMAIN
+                  valueFrom:
+                    secretKeyRef:
+                      name: imagearchive-backup-smb
+                      key: SMB_DOMAIN
+                      optional: true
+              command: ["sh", "-c"]
+              args:
+                - |
+                  set -eu
+                  export RCLONE_CONFIG_NAS_USER="$SMB_USER"
+                  # rclone only accepts passwords in its obscured form.
+                  RCLONE_CONFIG_NAS_PASS="$(rclone obscure "$SMB_PASSWORD")"
+                  export RCLONE_CONFIG_NAS_PASS
+                  if [ -n "${SMB_DOMAIN:-}" ]; then export RCLONE_CONFIG_NAS_DOMAIN="$SMB_DOMAIN"; fi
+                  dest="nas:$SMB_SHARE/imagearchive"
+                  stamp="$(date -u +%Y-%m-%d_%H%M)"
+
+                  rclone copyto /work/imagearchive.sql.gz "$dest/database/imagearchive_$stamp.sql.gz"
+                  echo "Saved database/imagearchive_$stamp.sql.gz"
+
+                  rclone copy /data/uploads "$dest/photos" --transfers 4 --stats 1m --stats-one-line --stats-log-level NOTICE
+                  echo "Photos copied"
+
+                  # Only reached if both copies above succeeded (set -e).
+                  rclone delete "$dest/database" --min-age 30d --include 'imagearchive_*.sql.gz'
+                  echo "Backup complete: $stamp"
+              volumeMounts:
+                - name: work
+                  mountPath: /work
+                  readOnly: true
+                - name: uploads
+                  mountPath: /data/uploads
+                  readOnly: true
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 64Mi
+                limits:
+                  memory: 512Mi

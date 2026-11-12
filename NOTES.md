@@ -70,6 +70,17 @@ all SQL is parameterised; no raw HTML rendering; CSRF protection; file paths can
 escape the uploads folder; private notes never reach the PDF; production dependencies
 have no known vulnerabilities.
 
+## Backups (2026-11-12)
+
+Nightly at 09:00 UTC a Kubernetes CronJob copies to `\\192.168.10.20\K3S_Backups\imagearchive`:
+a compressed database dump (`database/`, last 30 days kept) and every photo
+(`photos/`, only new ones sent each night, never deleted from the NAS). The NAS
+sign-in is asked for once, on the node, by the deploy script. How to run one on
+demand, check it, and restore is in `web/CLAUDE.md` under **Backups**.
+
+Backups are stored unencrypted on the NAS, including private notes in the database
+dump; anyone with access to that share can read them.
+
 ## Key decisions
 
 - **Deploy like movietracker:** `web/scripts/deploy.sh` copies the source to the node
@@ -93,6 +104,8 @@ have no known vulnerabilities.
   machine), the UI in a real browser, and uploads/sharing on a real iPhone.
 
 ## Open items
+
+- **Test a restore** once the first backup has run, so the procedure is proven.
 
 - **HTTPS.** The ingress is plain HTTP, like movietracker, so passwords and notes
   travel unencrypted. Add TLS (cert-manager or a Traefik resolver) before real use —
