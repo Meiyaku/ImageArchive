@@ -1,0 +1,8 @@
+node_modules
+dist
+uploads
+.env
+k8s
+scripts
+**/*.test.ts
+**/*.test.tsx
