@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { api } from '../api/client'
 import { ErrorBanner } from '../components/ErrorBanner'
 import { Layout } from '../components/Layout'
+import { PasswordInput } from '../components/PasswordInput'
 
 export default function AccountPage() {
   const [current, setCurrent] = useState('')
@@ -35,15 +36,15 @@ export default function AccountPage() {
       <form onSubmit={submit} className="mx-auto max-w-sm space-y-4">
         <label className="block">
           <span className="mb-1 block text-sm font-medium">Current password</span>
-          <input className="field" type="password" autoComplete="current-password" value={current} onChange={(e) => setCurrent(e.target.value)} required />
+          <PasswordInput autoComplete="current-password" value={current} onChange={(e) => setCurrent(e.target.value)} required />
         </label>
         <label className="block">
           <span className="mb-1 block text-sm font-medium">New password</span>
-          <input className="field" type="password" autoComplete="new-password" minLength={8} value={next} onChange={(e) => setNext(e.target.value)} required />
+          <PasswordInput autoComplete="new-password" minLength={8} value={next} onChange={(e) => setNext(e.target.value)} required />
         </label>
         <label className="block">
           <span className="mb-1 block text-sm font-medium">Confirm new password</span>
-          <input className="field" type="password" autoComplete="new-password" minLength={8} value={confirm} onChange={(e) => setConfirm(e.target.value)} required />
+          <PasswordInput autoComplete="new-password" minLength={8} value={confirm} onChange={(e) => setConfirm(e.target.value)} required />
         </label>
         <ErrorBanner message={error} />
         {done && <p role="status" className="text-sm text-green-700 dark:text-green-400">Password changed.</p>}

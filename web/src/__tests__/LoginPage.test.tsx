@@ -37,3 +37,16 @@ it('shows the server error on failure', async () => {
   await user.click(screen.getByRole('button', { name: 'Sign in' }))
   expect(await screen.findByRole('alert')).toHaveTextContent('Incorrect username or password')
 })
+
+it('shows and hides the password', async () => {
+  const user = userEvent.setup()
+  renderLogin()
+  const field = screen.getByLabelText('Password')
+  await user.type(field, 'secret-pass')
+  expect(field).toHaveAttribute('type', 'password')
+  await user.click(screen.getByRole('button', { name: 'Show password' }))
+  expect(field).toHaveAttribute('type', 'text')
+  expect(field).toHaveValue('secret-pass')
+  await user.click(screen.getByRole('button', { name: 'Hide password' }))
+  expect(field).toHaveAttribute('type', 'password')
+})

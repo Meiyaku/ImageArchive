@@ -42,6 +42,12 @@ notes), and can share an album as a story PDF.
     photo, intro), then each item in sequence order — photo, title, public notes.
     **Private notes are never included.** Create PDF → Share opens the iPhone share
     sheet; computers get a download.
+11. **Show password.** An eye button on the sign-in and Change password fields
+    reveals what's been typed; it starts hidden every time.
+12. **Sign-in log.** Every sign-in attempt is recorded with the username typed, the
+    result (signed in / failed / slowed down), IP address, device and time. Admins see
+    it under **Sign-in log** (account menu, or the button on Manage users), with a
+    "failed attempts only" filter. Kept 90 days. Passwords are never recorded.
 
 ## Security review (2026-11-12)
 
@@ -95,7 +101,7 @@ dump; anyone with access to that share can read them.
 
 ## Status
 
-- **Tests:** 51 passing — API (auth, admin, users can't see each other's data, file
+- **Tests:** 55 passing — API (auth, admin, users can't see each other's data, file
   cleanup, sequence, title, cover, story PDF contents, security fixes) and UI (login, album list,
   item page, share dialog).
 - **Verified locally:** production build run end to end; sample PDFs rendered and
@@ -104,6 +110,10 @@ dump; anyone with access to that share can read them.
   machine), the UI in a real browser, and uploads/sharing on a real iPhone.
 
 ## Open items
+
+- **Real client IPs in the sign-in log.** If the log shows 10.42.x.x addresses instead
+  of real ones, k3s's Traefik is hiding them; set its Service to
+  `externalTrafficPolicy: Local` (a cluster-wide Traefik change).
 
 - **Test a restore** once the first backup has run, so the procedure is proven.
 

@@ -79,6 +79,14 @@ in the page's hook. Hooks call `api`; components never call `fetch` directly.
 - The first admin is created at startup from `ADMIN_USERNAME`/`ADMIN_PASSWORD` only
   when the users table is empty. Further accounts: the in-app **Manage users** page
   (admins only) or `create-user`.
+- Every sign-in attempt (success, failed, throttled) goes to `login_attempts` via
+  `server/loginLog.ts` — typed username, matching user id, `req.ip`, user agent; never
+  the password. Also printed to the pod log as `login <result> user="…" ip=…`. Admins
+  see it at `/admin/sign-ins` (`GET /api/admin/logins`, newest 500). Pruned after
+  90 days at startup and daily. Logging errors never block a sign-in.
+- `req.ip` is what Traefik saw. With k3s's default ServiceLB, Traefik's Service uses
+  `externalTrafficPolicy: Cluster`, which can replace the client IP with an internal
+  10.42.x.x address; setting it to `Local` (HelmChartConfig for traefik) keeps real IPs.
 
 ### Security measures (keep these when changing the code)
 

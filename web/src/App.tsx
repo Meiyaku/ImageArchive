@@ -7,6 +7,7 @@ import AlbumPage from './pages/AlbumPage'
 import ItemPage from './pages/ItemPage'
 import AdminPage from './pages/AdminPage'
 import AccountPage from './pages/AccountPage'
+import SignInLogPage from './pages/SignInLogPage'
 
 function RequireAuth({ admin = false }: { admin?: boolean }) {
   const { user, loading } = useAuth()
@@ -32,6 +33,7 @@ export default function App() {
           </Route>
           <Route element={<RequireAuth admin />}>
             <Route path="/admin" element={<AdminPage />} />
+            <Route path="/admin/sign-ins" element={<SignInLogPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

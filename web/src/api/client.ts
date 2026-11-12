@@ -1,4 +1,4 @@
-import type { Album, Item, User } from './types'
+import type { Album, Item, LoginAttempt, User } from './types'
 
 export class ApiError extends Error {
   readonly status: number
@@ -108,6 +108,7 @@ export const api = {
   updateUser: (id: number, changes: { password?: string; isAdmin?: boolean }) =>
     request<{ user: User }>('PATCH', `/admin/users/${id}`, changes).then((r) => r.user),
   deleteUser: (id: number) => request<void>('DELETE', `/admin/users/${id}`),
+  listLogins: () => request<{ attempts: LoginAttempt[] }>('GET', '/admin/logins').then((r) => r.attempts),
 }
 
 /** Mirrors the server's storyFileName so the shared file has a sensible name. */

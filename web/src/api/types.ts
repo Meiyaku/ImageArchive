@@ -35,3 +35,15 @@ export interface Item {
   createdAt: string
   updatedAt: string
 }
+
+export interface LoginAttempt {
+  id: number
+  /** What was typed; may not be a real account. */
+  username: string
+  /** The matching account, if the username exists. */
+  userId: number | null
+  result: 'success' | 'failed' | 'throttled'
+  ip: string | null
+  userAgent: string | null
+  createdAt: string
+}

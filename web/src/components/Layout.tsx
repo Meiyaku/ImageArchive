@@ -68,6 +68,7 @@ function UserMenu() {
           <MenuLink onClick={() => navigate('/')}>My albums</MenuLink>
           <MenuLink onClick={() => navigate('/account')}>Change password</MenuLink>
           {user.isAdmin && <MenuLink onClick={() => navigate('/admin')}>Manage users</MenuLink>}
+          {user.isAdmin && <MenuLink onClick={() => navigate('/admin/sign-ins')}>Sign-in log</MenuLink>}
           <MenuLink onClick={() => logout().then(() => navigate('/login'))}>Sign out</MenuLink>
         </div>
       )}

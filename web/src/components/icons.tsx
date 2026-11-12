@@ -43,3 +43,9 @@ export const LockIcon = (p: SVGProps<SVGSVGElement>) => (
 export const ShareIcon = (p: SVGProps<SVGSVGElement>) => (
   <svg {...base(p)}><path d="M12 3v12M8 7l4-4 4 4" /><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7" /></svg>
 )
+export const EyeIcon = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base(p)}><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z" /><circle cx="12" cy="12" r="3" /></svg>
+)
+export const EyeOffIcon = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base(p)}><path d="M10.6 5.1A10.4 10.4 0 0 1 12 5c7 0 11 7 11 7a18 18 0 0 1-3.2 4M6.6 6.6A18 18 0 0 0 1 12s4 7 11 7a10 10 0 0 0 5.4-1.6" /><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2M1 1l22 22" /></svg>
+)

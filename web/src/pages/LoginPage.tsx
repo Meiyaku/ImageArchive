@@ -3,6 +3,7 @@ import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { ErrorBanner } from '../components/ErrorBanner'
 import { ImageIcon } from '../components/icons'
+import { PasswordInput } from '../components/PasswordInput'
 import { Spinner } from '../components/Spinner'
 
 export default function LoginPage() {
@@ -57,9 +58,7 @@ export default function LoginPage() {
         </label>
         <label className="block">
           <span className="mb-1 block text-sm font-medium">Password</span>
-          <input
-            className="field"
-            type="password"
+          <PasswordInput
             name="password"
             autoComplete="current-password"
             value={password}

@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { Link } from 'react-router-dom'
 import type { User } from '../api/types'
 import { ConfirmDialog } from '../components/AlbumDialogs'
 import { ErrorBanner } from '../components/ErrorBanner'
@@ -16,7 +17,11 @@ export default function AdminPage() {
   const [rowError, setRowError] = useState<string | null>(null)
 
   return (
-    <Layout title="Manage users" backTo="/">
+    <Layout
+      title="Manage users"
+      backTo="/"
+      actions={<Link to="/admin/sign-ins" className="btn-secondary h-9 min-h-0 px-3 text-sm">Sign-in log</Link>}
+    >
       <div className="mx-auto max-w-2xl space-y-6">
         <CreateUserForm onCreate={createUser} />
 
@@ -110,7 +115,7 @@ function CreateUserForm({ onCreate }: { onCreate: (u: string, p: string, admin: 
         </label>
         <label className="block">
           <span className="mb-1 block text-sm font-medium">Password</span>
-          <input className="field" type="text" autoComplete="new-password" minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} required />
+          <input className="field" type="text" autoComplete="new-password" autoCapitalize="none" autoCorrect="off" spellCheck={false} minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} required />
         </label>
       </div>
       <label className="flex items-center gap-2">
@@ -147,7 +152,7 @@ function ResetPasswordDialog({ user, onSubmit, onClose }: { user: User; onSubmit
       <form onSubmit={submit} className="space-y-4">
         <label className="block">
           <span className="mb-1 block text-sm font-medium">New password</span>
-          <input className="field" type="text" autoComplete="new-password" minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} required autoFocus />
+          <input className="field" type="text" autoComplete="new-password" autoCapitalize="none" autoCorrect="off" spellCheck={false} minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} required autoFocus />
         </label>
         <p className="text-sm text-slate-500 dark:text-slate-400">They'll be signed out of all devices.</p>
         <ErrorBanner message={error} />

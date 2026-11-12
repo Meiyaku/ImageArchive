@@ -2,6 +2,7 @@ import { mkdir } from 'node:fs/promises'
 import { createApp } from './app.ts'
 import { loadConfig } from './config.ts'
 import { createPool, migrate } from './db.ts'
+import { pruneLoginLog } from './loginLog.ts'
 import { bootstrapAdmin } from './users.ts'
 
 const config = loadConfig()
@@ -21,7 +22,11 @@ for (let attempt = 1; ; attempt++) {
 
 await migrate(pool)
 await bootstrapAdmin(pool, config.adminUsername, config.adminPassword)
-await pool.query('DELETE FROM sessions WHERE expires_at < now()')
+// Housekeeping now and daily: expired sessions, and sign-in log entries past retention.
+const cleanUp = () =>
+  Promise.all([pool.query('DELETE FROM sessions WHERE expires_at < now()'), pruneLoginLog(pool)])
+await cleanUp()
+setInterval(() => cleanUp().catch((err) => console.error('Cleanup failed:', err)), 86_400_000).unref()
 await mkdir(config.uploadDir, { recursive: true })
 
 const app = createApp({ pool, uploadDir: config.uploadDir, staticDir: config.staticDir })

@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import type { Pool } from '../db.ts'
 import { requireAdmin } from '../auth.ts'
+import { recentLogins } from '../loginLog.ts'
 import { hashPassword, MIN_PASSWORD_LENGTH } from '../password.ts'
 import { deleteImages } from '../storage.ts'
 import { createUser, USER_COLUMNS, ValidationError, type User } from '../users.ts'
@@ -12,6 +13,10 @@ export function adminRoutes(pool: Pool, uploadDir: string): Router {
   router.get('/users', async (_req, res) => {
     const { rows } = await pool.query<User>(`SELECT ${USER_COLUMNS} FROM users ORDER BY lower(username)`)
     res.json({ users: rows })
+  })
+
+  router.get('/logins', async (_req, res) => {
+    res.json({ attempts: await recentLogins(pool) })
   })
 
   router.post('/users', async (req, res) => {

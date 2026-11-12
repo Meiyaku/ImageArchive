@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import type { Pool } from '../db.ts'
 import { createSession, destroySession, requireUser, sessionTokenHash } from '../auth.ts'
+import { recordLogin } from '../loginLog.ts'
 import { LoginThrottle, TooManyAttemptsError, type LoginThrottleOptions } from '../loginThrottle.ts'
 import { hashPassword, MIN_PASSWORD_LENGTH, verifyPassword } from '../password.ts'
 import { USER_COLUMNS, type User } from '../users.ts'
@@ -31,13 +32,18 @@ export function authRoutes(pool: Pool, throttleOptions?: LoginThrottleOptions): 
         const valid = await verifyPassword(password, row?.passwordHash ?? (await getDummyHash()))
         return !!row && valid
       })
-      if (!ok || !row) return res.status(401).json({ error: 'Incorrect username or password' })
+      if (!ok || !row) {
+        await recordLogin(pool, req, name, 'failed', row?.id ?? null)
+        return res.status(401).json({ error: 'Incorrect username or password' })
+      }
     } catch (err) {
       if (err instanceof TooManyAttemptsError) {
+        await recordLogin(pool, req, name, 'throttled', null)
         return res.status(429).json({ error: 'Too many sign-in attempts. Wait a moment and try again.' })
       }
       throw err
     }
+    await recordLogin(pool, req, name, 'success', row.id)
     await createSession(pool, req, res, row.id)
     const { passwordHash: _, ...user } = row
     res.json({ user })
