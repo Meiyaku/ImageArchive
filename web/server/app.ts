@@ -9,6 +9,31 @@ import { albumRoutes } from './routes/albums.ts'
 import { authRoutes } from './routes/auth.ts'
 import { itemRoutes } from './routes/items.ts'
 
+/**
+ * Content-Security-Policy: everything from this origin only. blob:/data: images cover
+ * upload previews; frame-ancestors 'none' stops other sites framing the app (clickjacking).
+ */
+const CSP = [
+  "default-src 'self'",
+  "img-src 'self' blob: data:",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'none'",
+].join('; ')
+
+const securityHeaders: express.RequestHandler = (req, res, next) => {
+  res.setHeader('Content-Security-Policy', CSP)
+  res.setHeader('X-Frame-Options', 'DENY')
+  res.setHeader('X-Content-Type-Options', 'nosniff')
+  res.setHeader('Referrer-Policy', 'same-origin')
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin')
+  // Only meaningful over HTTPS, so it switches on by itself once TLS is in place.
+  // No includeSubDomains: other *.snowborn.com sites may still be HTTP-only.
+  if (req.secure) res.setHeader('Strict-Transport-Security', 'max-age=31536000')
+  next()
+}
+
 export interface AppOptions {
   pool: Pool
   uploadDir: string
@@ -20,6 +45,7 @@ export function createApp({ pool, uploadDir, staticDir }: AppOptions): express.E
   // Behind Traefik: trust X-Forwarded-* so req.secure / req.ip are right.
   app.set('trust proxy', 1)
   app.disable('x-powered-by')
+  app.use(securityHeaders)
 
   app.get('/healthz', async (_req, res) => {
     await pool.query('SELECT 1')

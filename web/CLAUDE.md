@@ -40,7 +40,8 @@ server/                 — Express 5 API, run as TypeScript via Node's type str
 ├── index.ts            — boot: wait for DB, migrate, bootstrap admin, listen
 ├── app.ts              — createApp({pool, uploadDir, staticDir}); used by tests too
 ├── db.ts               — pg Pool + migration runner (migrations/NNN_*.sql, advisory lock)
-├── auth.ts             — session cookies, requireUser/requireAdmin, Origin check, login limiter
+├── auth.ts             — session cookies, requireUser/requireAdmin, Origin check
+├── loginThrottle.ts    — per-username growing delays for login (no lockouts)
 ├── users.ts            — createUser / bootstrapAdmin / validation
 ├── password.ts         — scrypt hashing (node:crypto, no native deps)
 ├── storage.ts          — sharp: normalise uploads to JPEG + thumbnail, delete files
@@ -79,6 +80,17 @@ in the page's hook. Hooks call `api`; components never call `fetch` directly.
   when the users table is empty. Further accounts: the in-app **Manage users** page
   (admins only) or `create-user`.
 
+### Security measures (keep these when changing the code)
+
+- `app.ts` sets a strict CSP (`default-src 'self'`, no inline scripts/styles,
+  `frame-ancestors 'none'`), X-Frame-Options, nosniff, Referrer-Policy, and HSTS when
+  the request is HTTPS. Don't add inline `<script>`/`<style>` to `index.html`.
+- Login: `LoginThrottle` slows guessing per username without locking anyone out;
+  unknown usernames are checked against a dummy hash so timing doesn't reveal them.
+- Uploads: `storeImage` accepts only photo formats and ≤100 MP, checked from the
+  header before decoding.
+- Password changes delete the user's other sessions; admin resets delete all of them.
+
 ### Images (iOS)
 
 - `ImagePicker` is a `<label>` around a visually hidden `<input type="file" accept="image/*">`
@@ -114,8 +126,12 @@ entry, and runs `sudo k3s kubectl apply -k`. Namespace `imagearchive`.
 - `k8s/postgres.yaml` — Postgres 17 StatefulSet with a 5Gi PVC.
 - `k8s/app.yaml` — app Deployment (Recreate strategy; RWO volume), 50Gi uploads PVC,
   Service, Traefik Ingress for `imagearchive.snowborn.com`.
-- Secret `imagearchive-secrets` (`POSTGRES_PASSWORD`, `ADMIN_USERNAME`, `ADMIN_PASSWORD`)
-  is created by the deploy script on first run and is not in git.
+- `k8s/networkpolicy.yaml` — only the app's pods may connect to Postgres.
+- Secret `imagearchive-secrets` is created on the first deploy by
+  `scripts/remote-apply.sh`, which runs on the node: it prompts for the first admin,
+  generates the DB password, and passes values to kubectl on stdin (never as process
+  arguments). After a successful rollout it deletes `ADMIN_PASSWORD` from the Secret
+  (the app reads it as optional). Not in git.
 
 Create a user in the cluster:
 `sudo k3s kubectl -n imagearchive exec deploy/imagearchive -- node server/cli/create-user.ts <user> <pass>`

@@ -1,6 +1,6 @@
 import type { Request } from 'express'
 import multer from 'multer'
-import { storeImage, type StoredImage } from './storage.ts'
+import { storeImage, UnsupportedImageError, type StoredImage } from './storage.ts'
 
 export const MAX_UPLOAD_BYTES = 30 * 1024 * 1024
 
@@ -19,7 +19,8 @@ export async function storeUpload(req: Request, uploadDir: string): Promise<Stor
 export async function storeImageOr400(uploadDir: string, data: Buffer): Promise<StoredImage> {
   try {
     return await storeImage(uploadDir, data)
-  } catch {
-    throw Object.assign(new Error("That file couldn't be read as an image"), { status: 400 })
+  } catch (err) {
+    const message = err instanceof UnsupportedImageError ? err.message : "That file couldn't be read as an image"
+    throw Object.assign(new Error(message), { status: 400 })
   }
 }

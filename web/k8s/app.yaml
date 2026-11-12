@@ -52,11 +52,15 @@ spec:
                 secretKeyRef:
                   name: imagearchive-secrets
                   key: ADMIN_USERNAME
+                  # Removed after the first deploy (see scripts/remote-apply.sh).
+                  optional: true
             - name: ADMIN_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: imagearchive-secrets
                   key: ADMIN_PASSWORD
+                  # Removed after the first deploy (see scripts/remote-apply.sh).
+                  optional: true
           volumeMounts:
             - name: uploads
               mountPath: /data/uploads

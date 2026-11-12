@@ -12,7 +12,13 @@ declare module 'express-serve-static-core' {
   }
 }
 
-const hashToken = (token: string) => createHash('sha256').update(token).digest('hex')
+export const hashToken = (token: string) => createHash('sha256').update(token).digest('hex')
+
+/** Hash of the session token on this request, if any. */
+export const sessionTokenHash = (req: Request): string | null => {
+  const token = req.cookies?.[SESSION_COOKIE]
+  return typeof token === 'string' ? hashToken(token) : null
+}
 
 export async function createSession(pool: Pool, req: Request, res: Response, userId: number): Promise<void> {
   const token = randomBytes(32).toString('base64url')
@@ -71,37 +77,15 @@ export function requireAdmin(req: Request, res: Response, next: NextFunction) {
 export function checkOrigin(req: Request, res: Response, next: NextFunction) {
   if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return next()
   const origin = req.get('origin')
-  if (origin && new URL(origin).host !== req.get('host')) {
-    return res.status(403).json({ error: 'Cross-origin request rejected' })
+  if (origin === undefined) return next()
+  // An unparseable Origin (e.g. the literal "null" sent from sandboxed frames) is
+  // treated as cross-origin rather than crashing the request.
+  let host: string | null
+  try {
+    host = new URL(origin).host
+  } catch {
+    host = null
   }
+  if (host !== req.get('host')) return res.status(403).json({ error: 'Cross-origin request rejected' })
   next()
-}
-
-/** Simple in-memory limiter for login attempts, keyed by IP + username. */
-export class LoginLimiter {
-  private attempts = new Map<string, { count: number; resetAt: number }>()
-  private max: number
-  private windowMs: number
-
-  constructor(max = 10, windowMs = 15 * 60_000) {
-    this.max = max
-    this.windowMs = windowMs
-  }
-
-  isBlocked(key: string): boolean {
-    const entry = this.attempts.get(key)
-    if (!entry || entry.resetAt < Date.now()) return false
-    return entry.count >= this.max
-  }
-
-  fail(key: string): void {
-    const now = Date.now()
-    const entry = this.attempts.get(key)
-    if (!entry || entry.resetAt < now) this.attempts.set(key, { count: 1, resetAt: now + this.windowMs })
-    else entry.count++
-  }
-
-  reset(key: string): void {
-    this.attempts.delete(key)
-  }
 }

@@ -17,7 +17,7 @@ notes), and can share an album as a story PDF.
 ## Features, in the order they were built
 
 1. **Login and accounts.** Login is the start page; there's no self sign-up. The first
-   admin is created on first deploy (the deploy script asks for the password). Admins
+   admin is created on first deploy (the deploy script asks for it on the node). Admins
    create users, reset passwords, grant/remove admin and delete users from
    **Manage users** (account menu → `/admin`). Everyone can change their own password.
 2. **Albums.** My Albums lists albums by name with a thumbnail and item count. Each
@@ -43,6 +43,33 @@ notes), and can share an album as a story PDF.
     **Private notes are never included.** Create PDF → Share opens the iPhone share
     sheet; computers get a download.
 
+## Security review (2026-11-12)
+
+A review of the whole codebase found nothing critical. Fixed:
+
+- **Oversized images** (a 758 KB upload decoded to 16,000×16,000 used ~460 MB): images
+  over 100 megapixels are now rejected from the header, before decoding; the two
+  resize steps no longer run at the same time.
+- **Login lockout abuse**: the IP+username lockout could lock users out if everyone
+  shares the load balancer's IP. Replaced with per-username growing delays (up to 3 s)
+  that handle one attempt at a time, so guessing stays slow but the real user can
+  always sign in. Memory use is capped.
+- **Username discovery by timing** (unknown usernames answered ~20× faster): unknown
+  usernames now go through the same password check.
+- **Security headers**: strict Content-Security-Policy, framing blocked (clickjacking),
+  nosniff, referrer policy; HSTS switches on automatically once HTTPS is in place.
+- **Password change** now signs out the user's other devices.
+- **Deploy secrets**: created on the node from stdin (never on a command line); the
+  first-admin password is removed from the cluster secret after a successful deploy.
+- **`Origin: null`** caused a 500; now a clean 403.
+- **Hardening**: uploads limited to photo formats (no SVG etc.); a NetworkPolicy lets
+  only the app reach Postgres.
+
+Checked and fine: users can't reach each other's data; admin routes are admin-only;
+all SQL is parameterised; no raw HTML rendering; CSRF protection; file paths can't
+escape the uploads folder; private notes never reach the PDF; production dependencies
+have no known vulnerabilities.
+
 ## Key decisions
 
 - **Deploy like movietracker:** `web/scripts/deploy.sh` copies the source to the node
@@ -57,8 +84,8 @@ notes), and can share an album as a story PDF.
 
 ## Status
 
-- **Tests:** 40 passing — API (auth, admin, users can't see each other's data, file
-  cleanup, sequence, title, cover, story PDF contents) and UI (login, album list,
+- **Tests:** 51 passing — API (auth, admin, users can't see each other's data, file
+  cleanup, sequence, title, cover, story PDF contents, security fixes) and UI (login, album list,
   item page, share dialog).
 - **Verified locally:** production build run end to end; sample PDFs rendered and
   checked by eye.
@@ -68,9 +95,10 @@ notes), and can share an album as a story PDF.
 ## Open items
 
 - **HTTPS.** The ingress is plain HTTP, like movietracker, so passwords and notes
-  travel unencrypted. Add TLS (cert-manager or a Traefik resolver) before real use.
-- **Security review.** Started but not completed; run it once there's a commit to
-  compare against.
+  travel unencrypted. Add TLS (cert-manager or a Traefik resolver) before real use —
+  the one open item from the security review.
+- **Secrets at rest.** k3s only encrypts Secrets on disk if started with
+  `--secrets-encryption`; worth enabling on the cluster.
 - **PDF text limits.** Emoji, and Chinese/Japanese/Korean text, are dropped from the
   PDF because the bundled font can't draw them.
 - **PDF photo size.** Capped at ~42% of page height; tune after seeing real albums.
@@ -85,5 +113,5 @@ cp .env.example .env
 npm install
 npm run dev          # http://localhost:5173 — sign in with ADMIN_USERNAME/ADMIN_PASSWORD from .env
 npm test
-scripts/deploy.sh    # deploy to k3s (prompts for the admin password on first deploy, then sudo)
+scripts/deploy.sh    # deploy to k3s (asks for sudo on the node; first deploy also asks for the admin account)
 ```
