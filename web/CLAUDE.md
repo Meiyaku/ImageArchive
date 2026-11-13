@@ -84,9 +84,10 @@ in the page's hook. Hooks call `api`; components never call `fetch` directly.
   the password. Also printed to the pod log as `login <result> user="…" ip=…`. Admins
   see it at `/admin/sign-ins` (`GET /api/admin/logins`, newest 500). Pruned after
   90 days at startup and daily. Logging errors never block a sign-in.
-- `req.ip` is what Traefik saw. With k3s's default ServiceLB, Traefik's Service uses
-  `externalTrafficPolicy: Cluster`, which can replace the client IP with an internal
-  10.42.x.x address; setting it to `Local` (HelmChartConfig for traefik) keeps real IPs.
+- `req.ip` is what Traefik saw. Real client IPs depend on Traefik's Service using
+  `externalTrafficPolicy: Local`, set on the node in
+  `/var/lib/rancher/k3s/server/manifests/traefik-config.yaml`. Without it, k3s's
+  ServiceLB makes every request appear to come from 10.42.x.x.
 
 ### Security measures (keep these when changing the code)
 

@@ -87,6 +87,16 @@ demand, check it, and restore is in `web/CLAUDE.md` under **Backups**.
 Backups are stored unencrypted on the NAS, including private notes in the database
 dump; anyone with access to that share can read them.
 
+## Cluster change: real client IPs (2026-11-13)
+
+The sign-in log showed internal 10.42.x.x addresses because k3s's ServiceLB hid the
+real client IP from Traefik. Fixed cluster-wide by setting Traefik's Service to
+`externalTrafficPolicy: Local` in `/var/lib/rancher/k3s/server/manifests/traefik-config.yaml`
+on the node (a HelmChartConfig; k3s's own `traefik.yaml` is left alone). Verified: the
+log now shows real addresses. Safe on this single-node cluster; no Traefik IP
+allow-lists existed. Undo: delete that file and `sudo systemctl restart k3s`. If a second
+node is ever added, only the node running Traefik will accept web traffic.
+
 ## Key decisions
 
 - **Deploy like movietracker:** `web/scripts/deploy.sh` copies the source to the node
@@ -110,10 +120,6 @@ dump; anyone with access to that share can read them.
   machine), the UI in a real browser, and uploads/sharing on a real iPhone.
 
 ## Open items
-
-- **Real client IPs in the sign-in log.** If the log shows 10.42.x.x addresses instead
-  of real ones, k3s's Traefik is hiding them; set its Service to
-  `externalTrafficPolicy: Local` (a cluster-wide Traefik change).
 
 - **Test a restore** once the first backup has run, so the procedure is proven.
 
