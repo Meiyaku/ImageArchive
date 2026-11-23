@@ -132,7 +132,10 @@ where file sharing isn't supported. Tests read PDFs back with pdfjs-dist.
 Docker, pushes `localhost:5000/imagearchive:<sha>`, appends a Kustomize `images:`
 entry, and runs `sudo k3s kubectl apply -k`. Namespace `imagearchive`.
 
-- `k8s/postgres.yaml` — Postgres 17 StatefulSet with a 5Gi PVC.
+- `k8s/postgres.yaml` — Postgres 17 StatefulSet with a 5Gi PVC. Runs as uid/gid 70
+  (skips the entrypoint's `gosu`, which hung on this cluster) and has a startupProbe
+  allowing 15 minutes, because Postgres can take ~5 minutes to become ready after an
+  unclean restart. Keep both, including in any cluster rebuild.
 - `k8s/app.yaml` — app Deployment (Recreate strategy; RWO volume), 50Gi uploads PVC,
   Service, Traefik Ingress for `imagearchive.snowborn.com`.
 - `k8s/networkpolicy.yaml` — only the app's pods may connect to Postgres.

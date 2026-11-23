@@ -48,7 +48,8 @@ if ! $K -n "$NS" get secret imagearchive-backup-smb >/dev/null 2>&1; then
 fi
 
 $K apply -k "$DIR/k8s"
-$K -n "$NS" rollout status statefulset/postgres --timeout=180s
+# Postgres can take ~5 minutes to become ready after a restart (see k8s/postgres.yaml).
+$K -n "$NS" rollout status statefulset/postgres --timeout=900s
 $K -n "$NS" rollout status deployment/imagearchive --timeout=180s
 
 # The app creates the first admin before it reports ready (and exits if it can't), so a

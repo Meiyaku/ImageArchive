@@ -31,6 +31,12 @@ spec:
       labels:
         app: postgres
     spec:
+      # Run as the Alpine image's postgres user (70) so the entrypoint skips its
+      # gosu step, which hung at 100% CPU on this cluster (2026-11-22). The data
+      # directory is already owned by 70.
+      securityContext:
+        runAsUser: 70
+        runAsGroup: 70
       containers:
         - name: postgres
           image: postgres:17-alpine
@@ -52,15 +58,26 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /var/lib/postgresql/data
+          # After an unclean restart Postgres can take ~5 minutes to become ready
+          # (lost wakeups, root cause open), so the startup probe allows up to
+          # 15 minutes before liveness checks begin.
+          startupProbe:
+            exec:
+              command: ["pg_isready", "-U", "imagearchive", "-d", "imagearchive"]
+            periodSeconds: 10
+            failureThreshold: 90
+            timeoutSeconds: 5
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "imagearchive", "-d", "imagearchive"]
+            periodSeconds: 30
+            failureThreshold: 5
+            timeoutSeconds: 5
           readinessProbe:
             exec:
               command: ["pg_isready", "-U", "imagearchive", "-d", "imagearchive"]
             periodSeconds: 10
-          livenessProbe:
-            exec:
-              command: ["pg_isready", "-U", "imagearchive", "-d", "imagearchive"]
-            initialDelaySeconds: 30
-            periodSeconds: 30
+            timeoutSeconds: 5
           resources:
             requests:
               cpu: 50m
