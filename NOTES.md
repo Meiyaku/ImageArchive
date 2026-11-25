@@ -108,7 +108,8 @@ denials in one boot), so its wakeups were lost until a 5-minute timer fired.
 Fixed node-wide by adding `kernel.apparmor_restrict_unprivileged_unconfined = 0` in
 `/etc/sysctl.d/20-apparmor.conf` (it loads after the package's `10-apparmor.conf`).
 Containers keep their normal AppArmor profile. Verified: after restarting, both the
-imagearchive and crafting-catalog databases were ready in 10 seconds. The cost is a
+imagearchive and crafting-catalog databases were ready in 10 seconds, and after a full
+reboot (kernel 7.0.0-44) the setting held with no Postgres signal denials. The cost is a
 host hardening default from July, which affects programs on the VM, not containers.
 Undo: delete the file and `sudo sysctl -w kernel.apparmor_restrict_unprivileged_unconfined=1`.
 Carry the file into any rebuild of the VM.
