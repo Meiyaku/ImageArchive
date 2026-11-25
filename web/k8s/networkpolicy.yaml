@@ -19,3 +19,28 @@ spec:
       ports:
         - protocol: TCP
           port: 5432
+---
+# The app accepts connections only from Traefik (k3s runs it in kube-system), so other
+# pods can't reach it directly and forge the X-Forwarded-For / X-Forwarded-Proto headers
+# that req.ip and req.secure trust. Kubelet health probes come from the node itself,
+# which k3s's network policy controller always allows.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: imagearchive-from-traefik-only
+spec:
+  podSelector:
+    matchLabels:
+      app: imagearchive
+  policyTypes: ["Ingress"]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: traefik
+      ports:
+        - protocol: TCP
+          port: 3000

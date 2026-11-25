@@ -26,12 +26,13 @@ npm test               # vitest: server API tests + client component tests
 npm run lint
 npm run typecheck
 npm run create-user -- <username> <password> [--admin]
-scripts/deploy.sh      # build on the k3s node and roll out (see Deploy)
+npm run deploy         # scripts/deploy.sh: build on the k3s node and roll out (see Deploy)
 ```
 
 No Docker or Postgres is needed locally: `npm run dev:db` runs PGlite (Postgres
 compiled to WASM) behind the Postgres wire protocol, persisted in `.devdb/`. Server
-tests do the same in-memory per test file (`server/testing.ts`).
+tests do the same in-memory per test file (`server/testing.ts`). PGlite serves one
+connection at a time, so the test pool has `max: 1`.
 
 ## Architecture
 
@@ -41,7 +42,7 @@ server/                 — Express 5 API, run as TypeScript via Node's type str
 ├── app.ts              — createApp({pool, uploadDir, staticDir}); used by tests too
 ├── db.ts               — pg Pool + migration runner (migrations/NNN_*.sql, advisory lock)
 ├── auth.ts             — session cookies, requireUser/requireAdmin, Origin check
-├── loginThrottle.ts    — per-username growing delays for login (no lockouts)
+├── loginThrottle.ts    — growing delays for login (no lockouts) + ConcurrencyLimit for scrypt
 ├── users.ts            — createUser / bootstrapAdmin / validation
 ├── password.ts         — scrypt hashing (node:crypto, no native deps)
 ├── storage.ts          — sharp: normalise uploads to JPEG + thumbnail, delete files
@@ -82,8 +83,9 @@ in the page's hook. Hooks call `api`; components never call `fetch` directly.
 - Every sign-in attempt (success, failed, throttled) goes to `login_attempts` via
   `server/loginLog.ts` — typed username, matching user id, `req.ip`, user agent; never
   the password. Also printed to the pod log as `login <result> user="…" ip=…`. Admins
-  see it at `/admin/sign-ins` (`GET /api/admin/logins`, newest 500). Pruned after
-  90 days at startup and daily. Logging errors never block a sign-in.
+  see it at `/admin/sign-ins` (`GET /api/admin/logins`, newest 500). Pruned at startup
+  and hourly: entries older than 90 days, and anything beyond the newest 100,000 rows
+  (anyone can add rows by failing to sign in). Logging errors never block a sign-in.
 - `req.ip` is what Traefik saw. Real client IPs depend on Traefik's Service using
   `externalTrafficPolicy: Local`, set on the node in
   `/var/lib/rancher/k3s/server/manifests/traefik-config.yaml`. Without it, k3s's
@@ -94,8 +96,17 @@ in the page's hook. Hooks call `api`; components never call `fetch` directly.
 - `app.ts` sets a strict CSP (`default-src 'self'`, no inline scripts/styles,
   `frame-ancestors 'none'`), X-Frame-Options, nosniff, Referrer-Policy, and HSTS when
   the request is HTTPS. Don't add inline `<script>`/`<style>` to `index.html`.
-- Login: `LoginThrottle` slows guessing per username without locking anyone out;
-  unknown usernames are checked against a dummy hash so timing doesn't reveal them.
+- Login: `LoginThrottle` slows guessing without locking anyone out, at two levels:
+  per typed username (3 free failures; a success resets it) and per client IP (10 free
+  failures; a success does *not* reset it, so an attacker can't clear it by signing
+  into their own account). Both delays grow to 3 s and too many queued attempts get a
+  429. The per-IP level relies on real client IPs (see `req.ip` above).
+  A global `ConcurrencyLimit` runs at most 4 scrypt checks at once (64 queued, then
+  429), so a flood of made-up usernames can't exhaust the pod. Unknown usernames are
+  checked against a dummy hash so timing doesn't reveal them. Limits are set in
+  `routes/auth.ts` (`AuthLimits`); tests pass small ones via `createTestContext`.
+- Change password: guesses at the current password are throttled per user id, so a
+  stolen session can't be used to brute-force it.
 - Uploads: `storeImage` accepts only photo formats and ≤100 MP, checked from the
   header before decoding.
 - Password changes delete the user's other sessions; admin resets delete all of them.
@@ -148,7 +159,16 @@ entry, and runs `sudo k3s kubectl apply -k`. Namespace `imagearchive`.
   setting when they restart.
 - `k8s/app.yaml` — app Deployment (Recreate strategy; RWO volume), 50Gi uploads PVC,
   Service, Traefik Ingress for `imagearchive.snowborn.com`.
-- `k8s/networkpolicy.yaml` — only the app's pods may connect to Postgres.
+- `k8s/networkpolicy.yaml` — only the app's pods may connect to Postgres, and only
+  Traefik (pods labelled `app.kubernetes.io/name=traefik` in `kube-system`) may
+  connect to the app, so nothing can bypass it and forge `X-Forwarded-*` headers.
+  If the site stops answering after a Traefik change, check those labels first:
+  `sudo k3s kubectl -n kube-system get pods --show-labels | grep traefik`.
+- The app pod runs as uid 1000 with a read-only root filesystem, no capabilities, no
+  privilege escalation, RuntimeDefault seccomp and no service account token. Writable
+  paths are `/data/uploads` and an emptyDir at `/tmp` (libvips scratch space). A new
+  feature that writes files must use one of those.
+- `deploy.sh` builds in a fresh `mktemp -d` directory on the node, removed afterwards.
 - Secret `imagearchive-secrets` is created on the first deploy by
   `scripts/remote-apply.sh`, which runs on the node: it prompts for the first admin,
   generates the DB password, and passes values to kubectl on stdin (never as process
@@ -192,6 +212,22 @@ $K cp ./photos/. ${POD#pod/}:/data/uploads
 
 Changing the SMB password: `$K delete secret imagearchive-backup-smb` and redeploy
 (it prompts again).
+
+### Updating pinned images
+
+`Dockerfile` (`node:24-alpine`), `k8s/postgres.yaml` and `k8s/backup.yaml`
+(`postgres:17-alpine`, `rclone/rclone`) pin images as `tag@sha256:…`, so builds are
+reproducible but upstream security fixes only arrive when the digest is bumped. Check
+roughly monthly. Get the current multi-arch digest of a tag (no Docker needed):
+
+```bash
+repo=library/node tag=24-alpine
+tok=$(curl -fsS "https://auth.docker.io/token?service=registry.docker.io&scope=repository:$repo:pull" | python3 -c 'import sys,json;print(json.load(sys.stdin)["token"])')
+curl -fsSI -H "Authorization: Bearer $tok" -H 'Accept: application/vnd.oci.image.index.v1+json' \
+  "https://registry-1.docker.io/v2/$repo/manifests/$tag" | grep -i docker-content-digest
+```
+
+Changing the Postgres digest restarts the database on the next deploy.
 
 Create a user in the cluster:
 `sudo k3s kubectl -n imagearchive exec deploy/imagearchive -- node server/cli/create-user.ts <user> <pass>`

@@ -17,7 +17,8 @@
     "test:watch": "vitest",
     "lint": "eslint src server",
     "typecheck": "tsc -b",
-    "dev:db": "node scripts/dev-db.ts"
+    "dev:db": "node scripts/dev-db.ts",
+    "deploy": "scripts/deploy.sh"
   },
   "dependencies": {
     "cookie-parser": "^1.4.7",

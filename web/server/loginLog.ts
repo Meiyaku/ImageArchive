@@ -14,6 +14,11 @@ export interface LoginAttempt {
 }
 
 export const LOGIN_LOG_DAYS = 90
+/**
+ * Most entries kept, whatever their age. Anyone can add rows by failing to sign in, so
+ * this bounds the table if someone floods the sign-in form between prunes.
+ */
+export const LOGIN_LOG_MAX_ROWS = 100_000
 
 /**
  * Records a sign-in attempt in the database and the server log. req.ip is the client
@@ -36,8 +41,13 @@ export async function recordLogin(
   }
 }
 
-export async function pruneLoginLog(pool: Pool): Promise<void> {
+export async function pruneLoginLog(pool: Pool, maxRows = LOGIN_LOG_MAX_ROWS): Promise<void> {
   await pool.query(`DELETE FROM login_attempts WHERE created_at < now() - make_interval(days => $1)`, [LOGIN_LOG_DAYS])
+  await pool.query(
+    `DELETE FROM login_attempts
+      WHERE id <= (SELECT id FROM login_attempts ORDER BY id DESC OFFSET $1 LIMIT 1)`,
+    [maxRows],
+  )
 }
 
 export async function recentLogins(pool: Pool, limit = 500): Promise<LoginAttempt[]> {

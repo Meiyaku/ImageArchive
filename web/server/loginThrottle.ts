@@ -19,6 +19,12 @@ export interface LoginThrottleOptions {
   maxPending?: number
   windowMs?: number
   maxKeys?: number
+  /**
+   * Whether a success clears the failure count. True for usernames (the real user
+   * signing in ends the delays). False for client IPs, so an attacker with an account
+   * of their own can't sign into it between guesses to reset their IP's count.
+   */
+  resetOnSuccess?: boolean
 }
 
 interface Entry {
@@ -42,6 +48,7 @@ export class LoginThrottle {
       maxPending: 5,
       windowMs: 15 * 60_000,
       maxKeys: 10_000,
+      resetOnSuccess: true,
       ...opts,
     }
   }
@@ -72,7 +79,7 @@ export class LoginThrottle {
       if (wait) await new Promise((resolve) => setTimeout(resolve, wait))
       const ok = await attempt()
       if (ok) {
-        entry.failures = 0
+        if (this.opts.resetOnSuccess) entry.failures = 0
       } else {
         entry.failures++
         entry.lastFailure = Date.now()
@@ -114,5 +121,49 @@ export class LoginThrottle {
       if (this.entries.size < this.opts.maxKeys) break
       if (e.pending === 0) this.entries.delete(key)
     }
+  }
+}
+
+/**
+ * Caps how many password hashes run at once across all sign-in requests. Each scrypt
+ * check takes ~16 MB and tens of milliseconds of CPU, so a flood of attempts with
+ * made-up usernames (which no per-username throttle sees twice) could otherwise
+ * exhaust the pod. Excess callers wait in a bounded queue; beyond it they get
+ * TooManyAttemptsError (a 429).
+ */
+export class ConcurrencyLimit {
+  private active = 0
+  private queue: (() => void)[] = []
+  private readonly max: number
+  private readonly maxQueue: number
+
+  constructor(max = 4, maxQueue = 64) {
+    this.max = max
+    this.maxQueue = maxQueue
+  }
+
+  async run<T>(task: () => Promise<T>): Promise<T> {
+    if (this.active >= this.max) {
+      if (this.queue.length >= this.maxQueue) throw new TooManyAttemptsError()
+      await new Promise<void>((resolve) => this.queue.push(resolve))
+    } else {
+      this.active++
+    }
+    try {
+      return await task()
+    } finally {
+      // Hand the slot straight to the next waiter, or free it.
+      const next = this.queue.shift()
+      if (next) next()
+      else this.active--
+    }
+  }
+
+  get running(): number {
+    return this.active
+  }
+
+  get waiting(): number {
+    return this.queue.length
   }
 }
