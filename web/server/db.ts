@@ -4,8 +4,8 @@ import pg from 'pg'
 
 export type Pool = pg.Pool
 
-export function createPool(connectionString: string): Pool {
-  return new pg.Pool({ connectionString, max: 10 })
+export function createPool(connectionString: string, max = 10): Pool {
+  return new pg.Pool({ connectionString, max })
 }
 
 const MIGRATIONS_DIR = path.join(import.meta.dirname, 'migrations')

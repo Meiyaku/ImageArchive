@@ -45,7 +45,7 @@ spec:
             # Step 1: a consistent database snapshot. Photos are written before their
             # database row, so every photo the dump refers to already exists for step 2.
             - name: dump-database
-              image: postgres:17-alpine
+              image: postgres:17-alpine@sha256:f9cf3e1f0066f0eb0c48707d864f0ac5941e9ff454a072077d97a4d278d07d73
               env:
                 - name: PGPASSWORD
                   valueFrom:
@@ -71,7 +71,7 @@ spec:
           containers:
             # Step 2: copy the dump and any new photos to the NAS.
             - name: copy-to-nas
-              image: rclone/rclone:1.75.2
+              image: rclone/rclone:1.75.2@sha256:2687085f718d3c628f7fdfb77c52a1d344332aed543110bb88088f2c70d43eb5
               env:
                 - name: RCLONE_CONFIG_NAS_TYPE
                   value: smb

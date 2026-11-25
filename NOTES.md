@@ -79,6 +79,34 @@ all SQL is parameterised; no raw HTML rendering; CSRF protection; file paths can
 escape the uploads folder; private notes never reach the PDF; production dependencies
 have no known vulnerabilities.
 
+## Security scan (2026-11-24)
+
+A second full scan (code, k8s, deploy scripts, dependencies, git history) found
+nothing critical; HTTPS is still the main open risk. Fixed:
+
+- **Sign-in flooding**: made-up usernames skipped the per-username delays, and every
+  attempt costs a password hash (~16 MB) and a log row. Added per-IP growing delays
+  (not reset by signing into one's own account), a cap of 4 password checks at once
+  across the server, and a 100,000-row cap on the sign-in log, pruned hourly.
+- **Change password** wasn't throttled, so a stolen session could guess the current
+  password quickly. Now throttled per user.
+- **App reachable by any pod**: a NetworkPolicy now admits only Traefik, so other
+  pods can't bypass it and fake client IPs or HTTPS.
+- **Container hardening**: the app pod now runs as non-root with a read-only
+  filesystem, no capabilities and no Kubernetes API token.
+- **Deploy**: builds in a fresh private temp directory on the node instead of a fixed
+  `/tmp` path.
+- **Images pinned by digest** (node, postgres, rclone); see CLAUDE.md for bumping them.
+- **Dev dependencies**: `npm audit fix` cleared 9 moderate issues in the lint
+  toolchain (none shipped in the image).
+
+Not changed: backups stay unencrypted on the NAS (below), and Postgres and the backup
+job were not hardened further, given Postgres's start-up history on this cluster.
+
+Verified in production (2026-11-24): deployed; signing in and uploading a photo work
+with the new NetworkPolicy and the read-only app filesystem, and Postgres restarted
+cleanly on the pinned image.
+
 ## Backups (2026-11-12)
 
 Nightly at 09:00 UTC a Kubernetes CronJob copies to `\\192.168.10.20\K3S_Backups\imagearchive`:
@@ -131,8 +159,8 @@ Carry the file into any rebuild of the VM.
 
 ## Status
 
-- **Tests:** 58 passing — API (auth, admin, users can't see each other's data, file
-  cleanup, sequence, title, cover, story PDF contents, security fixes) and UI (login, album list,
+- **Tests:** 65 passing — API (auth, admin, users can't see each other's data, file
+  cleanup, sequence, title, cover, story PDF contents, security fixes, sign-in rate limits) and UI (login, album list,
   item page, share dialog).
 - **Verified locally:** production build run end to end; sample PDFs rendered and
   checked by eye.
@@ -163,5 +191,5 @@ cp .env.example .env
 npm install
 npm run dev          # http://localhost:5173 — sign in with ADMIN_USERNAME/ADMIN_PASSWORD from .env
 npm test
-scripts/deploy.sh    # deploy to k3s (asks for sudo on the node; first deploy also asks for the admin account)
+npm run deploy       # deploy to k3s (asks for sudo on the node; first deploy also asks for the admin account)
 ```

@@ -22,11 +22,12 @@ for (let attempt = 1; ; attempt++) {
 
 await migrate(pool)
 await bootstrapAdmin(pool, config.adminUsername, config.adminPassword)
-// Housekeeping now and daily: expired sessions, and sign-in log entries past retention.
+// Housekeeping now and hourly: expired sessions, and sign-in log entries past retention
+// or over the row cap. Hourly so a flood of failed sign-ins can't grow the table for long.
 const cleanUp = () =>
   Promise.all([pool.query('DELETE FROM sessions WHERE expires_at < now()'), pruneLoginLog(pool)])
 await cleanUp()
-setInterval(() => cleanUp().catch((err) => console.error('Cleanup failed:', err)), 86_400_000).unref()
+setInterval(() => cleanUp().catch((err) => console.error('Cleanup failed:', err)), 3_600_000).unref()
 await mkdir(config.uploadDir, { recursive: true })
 
 const app = createApp({ pool, uploadDir: config.uploadDir, staticDir: config.staticDir })

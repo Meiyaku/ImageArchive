@@ -27,8 +27,16 @@ spec:
       labels:
         app: imagearchive
     spec:
+      # The image's `node` user (1000). No service account token: the app never talks
+      # to the Kubernetes API.
+      automountServiceAccountToken: false
       securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
         fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: web
           # Pulled from the registry on the node itself. scripts/deploy.sh overrides
@@ -61,9 +69,18 @@ spec:
                   key: ADMIN_PASSWORD
                   # Removed after the first deploy (see scripts/remote-apply.sh).
                   optional: true
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
           volumeMounts:
             - name: uploads
               mountPath: /data/uploads
+            # The only other writable path: libvips (sharp) may spill very large
+            # images to $TMPDIR while decoding.
+            - name: tmp
+              mountPath: /tmp
           readinessProbe:
             httpGet:
               path: /healthz
@@ -86,6 +103,9 @@ spec:
         - name: uploads
           persistentVolumeClaim:
             claimName: imagearchive-uploads
+        - name: tmp
+          emptyDir:
+            sizeLimit: 1Gi
 ---
 apiVersion: v1
 kind: Service

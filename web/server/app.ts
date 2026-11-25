@@ -6,7 +6,7 @@ import type { Pool } from './db.ts'
 import { checkOrigin, loadUser, requireUser } from './auth.ts'
 import { adminRoutes } from './routes/admin.ts'
 import { albumRoutes } from './routes/albums.ts'
-import { authRoutes } from './routes/auth.ts'
+import { authRoutes, type AuthLimits } from './routes/auth.ts'
 import { itemRoutes } from './routes/items.ts'
 
 /**
@@ -38,9 +38,11 @@ export interface AppOptions {
   pool: Pool
   uploadDir: string
   staticDir?: string | null
+  /** Sign-in rate limits; tests pass small ones. */
+  authLimits?: AuthLimits
 }
 
-export function createApp({ pool, uploadDir, staticDir }: AppOptions): express.Express {
+export function createApp({ pool, uploadDir, staticDir, authLimits }: AppOptions): express.Express {
   const app = express()
   // Behind Traefik: trust X-Forwarded-* so req.secure / req.ip are right.
   app.set('trust proxy', 1)
@@ -57,7 +59,7 @@ export function createApp({ pool, uploadDir, staticDir }: AppOptions): express.E
   api.use(cookieParser())
   api.use(checkOrigin)
   api.use(loadUser(pool))
-  api.use('/auth', authRoutes(pool))
+  api.use('/auth', authRoutes(pool, authLimits))
   api.use('/admin', adminRoutes(pool, uploadDir))
   api.use('/albums', requireUser, albumRoutes(pool, uploadDir))
   api.use('/', requireUser, itemRoutes(pool, uploadDir))

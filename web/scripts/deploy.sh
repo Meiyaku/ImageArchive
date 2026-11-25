@@ -11,7 +11,6 @@ set -euo pipefail
 DEPLOY_HOST="${DEPLOY_HOST:-k3s.snowborn.com}"
 DEPLOY_USER="${DEPLOY_USER:-sb}"
 REPO="localhost:5000/imagearchive"
-REMOTE_DIR="/tmp/imagearchive-deploy"
 
 target="$DEPLOY_USER@$DEPLOY_HOST"
 cd "$(dirname "$0")/.."
@@ -27,7 +26,15 @@ fi
 IMAGE="$REPO:$TAG"
 
 echo "==> Copying build context and manifests to $target"
-ssh "$target" "rm -rf $REMOTE_DIR && mkdir -p $REMOTE_DIR"
+# A fresh private directory (mode 700) per deploy, so no other user on the node can
+# pre-create or swap the build context. remote-apply.sh deletes it when it finishes.
+REMOTE_DIR="$(ssh "$target" 'mktemp -d /tmp/imagearchive-deploy.XXXXXXXX')"
+case "$REMOTE_DIR" in
+  /tmp/imagearchive-deploy.*) ;;
+  *) echo "Unexpected remote directory: $REMOTE_DIR" >&2; exit 1 ;;
+esac
+# If a step fails before remote-apply.sh runs (it cleans up after itself), remove it here.
+trap 'ssh "$target" "rm -rf $REMOTE_DIR" || true' ERR
 COPYFILE_DISABLE=1 tar --no-xattrs --no-mac-metadata --no-fflags -czf - \
   Dockerfile .dockerignore package.json package-lock.json index.html vite.config.ts \
   tsconfig.json tsconfig.app.json tsconfig.server.json src server public k8s \
