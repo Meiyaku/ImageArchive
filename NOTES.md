@@ -97,6 +97,22 @@ log now shows real addresses. Safe on this single-node cluster; no Traefik IP
 allow-lists existed. Undo: delete that file and `sudo systemctl restart k3s`. If a second
 node is ever added, only the node running Traefik will accept web traffic.
 
+## Cluster change: Postgres signals and AppArmor (2026-11-24)
+
+Since Nov 19, Postgres took ~5 minutes to become ready after a restart. Cause: kernels
+newer than 7.0.0-38 enforce Ubuntu's `kernel.apparmor_restrict_unprivileged_unconfined = 1`,
+which gave every container a stacked AppArmor label (`…//&unconfined`). The container
+profile then refused the signals Postgres sends between its own processes (~32,000
+denials in one boot), so its wakeups were lost until a 5-minute timer fired.
+
+Fixed node-wide by adding `kernel.apparmor_restrict_unprivileged_unconfined = 0` in
+`/etc/sysctl.d/20-apparmor.conf` (it loads after the package's `10-apparmor.conf`).
+Containers keep their normal AppArmor profile. Verified: after restarting, both the
+imagearchive and crafting-catalog databases were ready in 10 seconds. The cost is a
+host hardening default from July, which affects programs on the VM, not containers.
+Undo: delete the file and `sudo sysctl -w kernel.apparmor_restrict_unprivileged_unconfined=1`.
+Carry the file into any rebuild of the VM.
+
 ## Key decisions
 
 - **Deploy like movietracker:** `web/scripts/deploy.sh` copies the source to the node
