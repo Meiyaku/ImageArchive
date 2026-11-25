@@ -138,8 +138,14 @@ entry, and runs `sudo k3s kubectl apply -k`. Namespace `imagearchive`.
 
 - `k8s/postgres.yaml` — Postgres 17 StatefulSet with a 5Gi PVC. Runs as uid/gid 70
   (skips the entrypoint's `gosu`, which hung on this cluster) and has a startupProbe
-  allowing 15 minutes, because Postgres can take ~5 minutes to become ready after an
-  unclean restart. Keep both, including in any cluster rebuild.
+  allowing 15 minutes. Keep both, including in any cluster rebuild.
+- **Node requirement:** `/etc/sysctl.d/20-apparmor.conf` on the node sets
+  `kernel.apparmor_restrict_unprivileged_unconfined = 0`. Without it (Ubuntu's default
+  is 1, enforced by kernels after 7.0.0-38), AppArmor blocks the signals Postgres sends
+  between its own processes: startups take ~5 minutes and shutdowns end unclean. Check
+  with `sysctl kernel.apparmor_restrict_unprivileged_unconfined` (should be 0) and
+  `sudo journalctl -k | grep 'signal='` (no postgres denials). Pods only pick up the
+  setting when they restart.
 - `k8s/app.yaml` — app Deployment (Recreate strategy; RWO volume), 50Gi uploads PVC,
   Service, Traefik Ingress for `imagearchive.snowborn.com`.
 - `k8s/networkpolicy.yaml` — only the app's pods may connect to Postgres.

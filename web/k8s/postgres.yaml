@@ -33,7 +33,8 @@ spec:
     spec:
       # Run as the Alpine image's postgres user (70) so the entrypoint skips its
       # gosu step, which hung at 100% CPU on this cluster (2026-11-22). The data
-      # directory is already owned by 70.
+      # directory is already owned by 70. The hang was most likely the AppArmor
+      # signal problem described below; keep this until tested without it.
       securityContext:
         runAsUser: 70
         runAsGroup: 70
@@ -58,9 +59,11 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /var/lib/postgresql/data
-          # After an unclean restart Postgres can take ~5 minutes to become ready
-          # (lost wakeups, root cause open), so the startup probe allows up to
-          # 15 minutes before liveness checks begin.
+          # Postgres took ~5 minutes to become ready because AppArmor blocked the
+          # signals it sends between its own processes (kernels after 7.0.0-38).
+          # Fixed on the node on 2026-11-24 (see NOTES.md); ready in ~10 s since.
+          # The startup probe still allows 15 minutes in case the node setting is
+          # lost, e.g. on a rebuild.
           startupProbe:
             exec:
               command: ["pg_isready", "-U", "imagearchive", "-d", "imagearchive"]
