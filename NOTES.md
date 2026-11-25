@@ -103,6 +103,10 @@ nothing critical; HTTPS is still the main open risk. Fixed:
 Not changed: backups stay unencrypted on the NAS (below), and Postgres and the backup
 job were not hardened further, given Postgres's start-up history on this cluster.
 
+Verified in production (2026-11-24): deployed; signing in and uploading a photo work
+with the new NetworkPolicy and the read-only app filesystem, and Postgres restarted
+cleanly on the pinned image.
+
 ## Backups (2026-11-12)
 
 Nightly at 09:00 UTC a Kubernetes CronJob copies to `\\192.168.10.20\K3S_Backups\imagearchive`:
