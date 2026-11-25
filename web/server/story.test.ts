@@ -146,6 +146,40 @@ describe('story PDF', () => {
     expect(noCoverPages[0]).toContain('An untitled first item')
   })
 
+  it('limits the story to chosen items, in sequence order, from this album only', async () => {
+    const alice = await login('alice', 'alice-password')
+    const album = (await alice.post('/api/albums').send({ name: 'Picks' })).body.album
+    const add = async (sequence: string, title: string) =>
+      (await alice.post(`/api/albums/${album.id}/items`).field('sequence', sequence).field('title', title)
+        .attach('image', await samplePng(), 'p.png').expect(201)).body.item.id as number
+    const one = await add('1', 'Alpha')
+    await add('2', 'Bravo')
+    const three = await add('3', 'Charlie')
+    const other = (await alice.post('/api/albums').send({ name: 'Other' })).body.album
+    const foreign = (await alice.post(`/api/albums/${other.id}/items`).field('title', 'Foreign')
+      .attach('image', await samplePng(), 'f.png').expect(201)).body.item.id as number
+
+    const res = await alice.get(`/api/albums/${album.id}/story.pdf`).query({ items: `${three},${one},${foreign}` })
+      .buffer(true).parse(binary).expect(200)
+    const all = (await pdfPages(res.body)).join(' | ')
+    expect(all).toContain('Alpha')
+    expect(all).toContain('Charlie')
+    expect(all).not.toContain('Bravo')
+    expect(all).not.toContain('Foreign')
+    expect(all.indexOf('Alpha')).toBeLessThan(all.indexOf('Charlie'))
+
+    await alice.get(`/api/albums/${album.id}/story.pdf`).query({ items: String(foreign) }).expect(400)
+    await alice.get(`/api/albums/${album.id}/story.pdf`).query({ items: '' }).expect(400)
+    await alice.get(`/api/albums/${album.id}/story.pdf`).query({ items: '1,x' }).expect(400)
+    await alice.get(`/api/albums/${album.id}/story.pdf?items=1&items=2`).expect(400)
+    const tooMany = Array.from({ length: 1001 }, (_, i) => i + 1).join(',')
+    await alice.get(`/api/albums/${album.id}/story.pdf`).query({ items: tooMany }).expect(400)
+
+    // Someone else's album stays hidden, even with valid item ids.
+    const bob = await login('bob', 'bob-password-1')
+    await bob.get(`/api/albums/${album.id}/story.pdf`).query({ items: String(one) }).expect(404)
+  })
+
   it('handles an empty album', async () => {
     const alice = await login('alice', 'alice-password')
     const album = (await alice.post('/api/albums').send({ name: 'Empty' })).body.album

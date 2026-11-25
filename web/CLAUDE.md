@@ -113,13 +113,17 @@ in the page's hook. Hooks call `api`; components never call `fetch` directly.
 
 ### Story PDF
 
-`GET /api/albums/:id/story.pdf[?cover=1]` streams a US Letter PDF: optional cover page
-(name, cover photo, intro), then items in sequence order as a continuous flow —
+`GET /api/albums/:id/story.pdf[?cover=1][&items=1,2,3]` streams a US Letter PDF: optional
+cover page (name, cover photo, intro), then items in sequence order as a continuous flow —
 photo, title, public notes. **Private notes are never selected for it.** Layout rules
 in `story.ts`: a photo and its title are never split across pages (photos capped at
 42% of page height so items can share a page); notes flow; story pages are numbered.
 Characters the DejaVu fonts can't draw (emoji, CJK) are dropped via fontkit rather
 than rendered as boxes. Photos are re-encoded to ≤1600px for a shareable file size.
+
+`items` limits the PDF to those ids (≤1000; still sequence order; ids outside the album
+are ignored, and none matching is a 400). The dialog offers **All photos** (no `items`)
+or **Choose photos** (a tap-to-select grid, starting empty).
 
 Client side, `ShareStoryDialog` is deliberately two taps (Create PDF → Share) because
 iOS only allows `navigator.share` straight after a tap; it falls back to a download

@@ -44,6 +44,22 @@ export function parseName(name: unknown): string | null {
   return trimmed.length >= 1 && trimmed.length <= 200 ? trimmed : null
 }
 
+/** Most items a story PDF can be limited to; keeps the URL well under header limits. */
+export const MAX_STORY_ITEMS = 1000
+
+/** ?items=1,2,3 → [1, 2, 3]; absent → null (all items). */
+export function parseItemIds(value: unknown): number[] | null {
+  if (value === undefined) return null
+  const parts = typeof value === 'string' ? value.split(',').map((s) => s.trim()) : []
+  if (parts.length === 0 || parts.some((s) => !/^\d{1,9}$/.test(s))) {
+    throw Object.assign(new Error('Choose at least one photo'), { status: 400 })
+  }
+  if (parts.length > MAX_STORY_ITEMS) {
+    throw Object.assign(new Error(`Choose at most ${MAX_STORY_ITEMS} photos, or use All photos`), { status: 400 })
+  }
+  return [...new Set(parts.map(Number))]
+}
+
 export function albumRoutes(pool: Pool, uploadDir: string): Router {
   const router = Router()
 
@@ -164,15 +180,24 @@ export function albumRoutes(pool: Pool, uploadDir: string): Router {
     })
   }
 
-  /** The shareable story PDF. ?cover=1 adds a cover page. Private notes are never included. */
+  /**
+   * The shareable story PDF. ?cover=1 adds a cover page; ?items=1,2,3 limits it to those
+   * items (still in sequence order; ids from other albums are ignored). Private notes are
+   * never included.
+   */
   router.get('/:id/story.pdf', async (req, res) => {
     const album = await ownedAlbum(req)
     if (!album) return res.status(404).json({ error: 'Album not found' })
+    const itemIds = parseItemIds(req.query.items)
     const { rows: items } = await pool.query<{ imageKey: string | null; title: string; publicNotes: string }>(
       `SELECT image_key AS "imageKey", title, public_notes AS "publicNotes"
-         FROM items WHERE album_id = $1 ORDER BY sequence, id`,
-      [album.id],
+         FROM items WHERE album_id = $1 AND ($2::int[] IS NULL OR id = ANY($2::int[]))
+        ORDER BY sequence, id`,
+      [album.id, itemIds],
     )
+    if (itemIds && items.length === 0) {
+      return res.status(400).json({ error: 'None of the chosen photos are in this album' })
+    }
     const fileName = storyFileName(album.name)
     res.setHeader('Content-Type', 'application/pdf')
     res.setHeader('Content-Disposition', `attachment; filename="${fileName.replace(/[^\x20-\x7e]/g, '_')}"; filename*=UTF-8''${encodeURIComponent(fileName)}`)

@@ -86,9 +86,16 @@ export const api = {
   setAlbumCoverFromItem: (id: number, itemId: number) =>
     request<{ album: Album }>('PUT', `/albums/${id}/cover`, { fromItemId: itemId }).then((r) => r.album),
   removeAlbumCover: (id: number) => request<{ album: Album }>('DELETE', `/albums/${id}/cover`).then((r) => r.album),
-  /** The shareable story PDF as a File, ready for navigator.share or download. */
-  storyPdf: async (album: Album, coverPage: boolean): Promise<File> => {
-    const res = await fetch(`/api/albums/${album.id}/story.pdf${coverPage ? '?cover=1' : ''}`, { credentials: 'same-origin' })
+  /**
+   * The shareable story PDF as a File, ready for navigator.share or download.
+   * itemIds limits it to those items (still in sequence order); omit for all of them.
+   */
+  storyPdf: async (album: Album, { coverPage, itemIds }: { coverPage: boolean; itemIds?: number[] }): Promise<File> => {
+    const params = new URLSearchParams()
+    if (coverPage) params.set('cover', '1')
+    if (itemIds) params.set('items', itemIds.join(','))
+    const query = params.size ? `?${params}` : ''
+    const res = await fetch(`/api/albums/${album.id}/story.pdf${query}`, { credentials: 'same-origin' })
     if (!res.ok) throw await parseError(res.status, await res.text())
     return new File([await res.blob()], storyFileName(album.name), { type: 'application/pdf' })
   },

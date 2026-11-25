@@ -49,3 +49,6 @@ export const EyeIcon = (p: SVGProps<SVGSVGElement>) => (
 export const EyeOffIcon = (p: SVGProps<SVGSVGElement>) => (
   <svg {...base(p)}><path d="M10.6 5.1A10.4 10.4 0 0 1 12 5c7 0 11 7 11 7a18 18 0 0 1-3.2 4M6.6 6.6A18 18 0 0 0 1 12s4 7 11 7a10 10 0 0 0 5.4-1.6" /><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2M1 1l22 22" /></svg>
 )
+export const CheckIcon = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base(p)}><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
+)

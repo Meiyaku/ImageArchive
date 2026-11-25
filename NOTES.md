@@ -48,6 +48,9 @@ notes), and can share an album as a story PDF.
     result (signed in / failed / slowed down), IP address, device and time. Admins see
     it under **Sign-in log** (account menu, or the button on Manage users), with a
     "failed attempts only" filter. Kept 90 days. Passwords are never recorded.
+13. **Choose photos for the PDF.** Share story offers **All photos** or **Choose
+    photos**: tap thumbnails to pick (Select all / Clear). Picked photos still appear
+    in sequence order.
 
 ## Security review (2026-11-12)
 
@@ -111,7 +114,7 @@ node is ever added, only the node running Traefik will accept web traffic.
 
 ## Status
 
-- **Tests:** 55 passing — API (auth, admin, users can't see each other's data, file
+- **Tests:** 58 passing — API (auth, admin, users can't see each other's data, file
   cleanup, sequence, title, cover, story PDF contents, security fixes) and UI (login, album list,
   item page, share dialog).
 - **Verified locally:** production build run end to end; sample PDFs rendered and
