@@ -116,8 +116,8 @@ node is ever added, only the node running Traefik will accept web traffic.
   item page, share dialog).
 - **Verified locally:** production build run end to end; sample PDFs rendered and
   checked by eye.
-- **Not yet verified:** the Docker image build and cluster deploy (not run from this
-  machine), the UI in a real browser, and uploads/sharing on a real iPhone.
+- **Verified in production (2026-11-24):** deployed to the cluster; the UI works in a
+  desktop browser and on iPhone, including photo uploads and sharing the story PDF.
 
 ## Open items
 
@@ -125,7 +125,8 @@ node is ever added, only the node running Traefik will accept web traffic.
 
 - **HTTPS.** The ingress is plain HTTP, like movietracker, so passwords and notes
   travel unencrypted. Add TLS (cert-manager or a Traefik resolver) before real use —
-  the one open item from the security review.
+  the one open item from the security review. On hold (2026-11-24) until the DNS
+  records for snowborn.com are under the owner's control again.
 - **Secrets at rest.** k3s only encrypts Secrets on disk if started with
   `--secrets-encryption`; worth enabling on the cluster.
 - **PDF text limits.** Emoji, and Chinese/Japanese/Korean text, are dropped from the
