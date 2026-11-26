@@ -31,7 +31,7 @@ export default function SignInLogPage() {
     >
       <div className="mx-auto max-w-2xl space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="text-sm text-slate-500 dark:text-slate-400">Every sign-in attempt from the last 90 days, newest first.</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Every sign-in attempt from the last 90 days, newest first.</p>
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" className="h-5 w-5" checked={problemsOnly} onChange={(e) => setProblemsOnly(e.target.checked)} />
             Failed attempts only
@@ -39,23 +39,23 @@ export default function SignInLogPage() {
         </div>
         <ErrorBanner message={error} />
         {!attempts && !error && <Spinner />}
-        {shown?.length === 0 && <p className="py-10 text-center text-slate-500 dark:text-slate-400">No sign-in attempts to show.</p>}
+        {shown?.length === 0 && <p className="py-10 text-center text-gray-500 dark:text-gray-400">No sign-in attempts to show.</p>}
         {shown && shown.length > 0 && (
-          <ul className="divide-y divide-slate-200 rounded-xl border border-slate-200 bg-white dark:divide-slate-800 dark:border-slate-800 dark:bg-slate-900">
+          <ul className="divide-y divide-gray-200 rounded-xl border border-gray-200 bg-white dark:divide-gray-800 dark:border-gray-800 dark:bg-gray-900">
             {shown.map((a) => (
               <li key={a.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 p-3">
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium">
                     {a.username}
-                    {a.result === 'failed' && a.userId === null && <span className="ml-1 text-sm font-normal text-slate-500 dark:text-slate-400">(no such account)</span>}
+                    {a.result === 'failed' && a.userId === null && <span className="ml-1 text-sm font-normal text-gray-500 dark:text-gray-400">(no such account)</span>}
                   </p>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
                     <span className="tabular-nums">{a.ip ?? 'unknown IP'}</span> · <span title={a.userAgent ?? undefined}>{describeDevice(a.userAgent)}</span>
                   </p>
                 </div>
                 <div className="text-right">
                   <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${RESULT_STYLE[a.result]}`}>{RESULT_LABEL[a.result]}</span>
-                  <p className="text-xs text-slate-500 tabular-nums dark:text-slate-400">{new Date(a.createdAt).toLocaleString()}</p>
+                  <p className="text-xs text-gray-500 tabular-nums dark:text-gray-400">{new Date(a.createdAt).toLocaleString()}</p>
                 </div>
               </li>
             ))}

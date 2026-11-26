@@ -11,7 +11,12 @@ await db.exec(`DO $$ BEGIN
   END IF; END $$;`)
 const exists = await db.query(`SELECT 1 FROM pg_database WHERE datname = 'imagearchive'`)
 if (!exists.rows.length) await db.exec('CREATE DATABASE imagearchive OWNER imagearchive')
-const server = new PGLiteSocketServer({ db, port, host: '127.0.0.1' })
+const server = new PGLiteSocketServer({
+  db, port, host: '127.0.0.1',
+  // The default is 1, which resets the app's other pool connections (it opens up to 10),
+  // so parallel requests such as an album's thumbnails fail. Queries are still queued.
+  maxConnections: 10,
+})
 await server.start()
 console.log(`Dev Postgres (PGlite) listening on 127.0.0.1:${port}`)
 

@@ -29,14 +29,14 @@ export default function AdminPage() {
           <h2 className="mb-2 font-semibold">Accounts</h2>
           <ErrorBanner message={error ?? rowError} />
           {!users && !error && <Spinner />}
-          <ul className="divide-y divide-slate-200 rounded-xl border border-slate-200 bg-white dark:divide-slate-800 dark:border-slate-800 dark:bg-slate-900">
+          <ul className="divide-y divide-gray-200 rounded-xl border border-gray-200 bg-white dark:divide-gray-800 dark:border-gray-800 dark:bg-gray-900">
             {users?.map((u) => (
               <li key={u.id} className="flex flex-wrap items-center gap-2 p-3">
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium">
-                    {u.username} {u.id === me?.id && <span className="text-sm font-normal text-slate-500">(you)</span>}
+                    {u.username} {u.id === me?.id && <span className="text-sm font-normal text-gray-500">(you)</span>}
                   </p>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
                     {u.isAdmin ? 'Admin' : 'User'} · created {new Date(u.createdAt).toLocaleDateString()}
                   </p>
                 </div>
@@ -106,7 +106,7 @@ function CreateUserForm({ onCreate }: { onCreate: (u: string, p: string, admin: 
   }
 
   return (
-    <form onSubmit={submit} className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+    <form onSubmit={submit} className="space-y-3 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
       <h2 className="font-semibold">Create account</h2>
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="block">
@@ -154,7 +154,7 @@ function ResetPasswordDialog({ user, onSubmit, onClose }: { user: User; onSubmit
           <span className="mb-1 block text-sm font-medium">New password</span>
           <input className="field" type="text" autoComplete="new-password" autoCapitalize="none" autoCorrect="off" spellCheck={false} minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} required autoFocus />
         </label>
-        <p className="text-sm text-slate-500 dark:text-slate-400">They'll be signed out of all devices.</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400">They'll be signed out of all devices.</p>
         <ErrorBanner message={error} />
         <div className="flex justify-end gap-2">
           <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>

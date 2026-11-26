@@ -67,7 +67,7 @@ export default function ItemPage() {
 
           <label className="block">
             <span className="mb-1 block text-sm font-medium">
-              Title <span className="font-normal text-slate-500 dark:text-slate-400">(optional)</span>
+              Title <span className="font-normal text-gray-500 dark:text-gray-400">(optional)</span>
             </span>
             <input
               className="field"
@@ -92,7 +92,7 @@ export default function ItemPage() {
               placeholder={isNew ? (editor.nextSequence !== null ? `${editor.nextSequence} (auto)` : 'Auto') : ''}
               aria-describedby="sequence-help"
             />
-            <span id="sequence-help" className="mt-1 block text-xs text-slate-500 dark:text-slate-400">
+            <span id="sequence-help" className="mt-1 block text-xs text-gray-500 dark:text-gray-400">
               Items in the album are sorted by this number.{isNew && ' Leave blank to put it at the end.'}
             </span>
           </div>
@@ -124,8 +124,8 @@ export default function ItemPage() {
           <ErrorBanner message={editor.error} />
 
           {saving && (
-            <div className="h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800" role="progressbar" aria-valuenow={Math.round(editor.progress! * 100)}>
-              <div className="h-full bg-indigo-600 transition-[width]" style={{ width: `${editor.progress! * 100}%` }} />
+            <div className="h-2 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-800" role="progressbar" aria-valuenow={Math.round(editor.progress! * 100)}>
+              <div className="h-full bg-blue-600 transition-[width]" style={{ width: `${editor.progress! * 100}%` }} />
             </div>
           )}
 
@@ -167,7 +167,7 @@ function ItemView({ item, imageSrc }: { item: Item; imageSrc: string | null }) {
     <article className="mx-auto max-w-2xl space-y-5">
       {imageSrc && (
         // Tap the photo to open it full size (handy for zooming on a phone).
-        <a href={imageSrc} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-xl bg-slate-100 dark:bg-slate-900">
+        <a href={imageSrc} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-xl bg-gray-100 dark:bg-gray-900">
           <img src={imageSrc} alt={item.title || item.publicNotes || 'Album item'} className="max-h-[70dvh] w-full object-contain" />
         </a>
       )}
@@ -176,15 +176,15 @@ function ItemView({ item, imageSrc }: { item: Item; imageSrc: string | null }) {
 
       <dl className="space-y-4">
         <div>
-          <dt className="text-sm font-medium text-slate-500 dark:text-slate-400">Sequence</dt>
+          <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Sequence</dt>
           <dd className="mt-0.5 tabular-nums">{item.sequence}</dd>
         </div>
         <div>
-          <dt className="text-sm font-medium text-slate-500 dark:text-slate-400">Public notes</dt>
+          <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Public notes</dt>
           <NotesText text={item.publicNotes} />
         </div>
         <div className="rounded-xl bg-amber-50/60 p-3 dark:bg-amber-950/20">
-          <dt className="flex items-center gap-1.5 text-sm font-medium text-slate-500 dark:text-slate-400">
+          <dt className="flex items-center gap-1.5 text-sm font-medium text-gray-500 dark:text-gray-400">
             <LockIcon width={14} height={14} /> Private notes
           </dt>
           <NotesText text={item.privateNotes} />
@@ -195,6 +195,6 @@ function ItemView({ item, imageSrc }: { item: Item; imageSrc: string | null }) {
 }
 
 function NotesText({ text }: { text: string }) {
-  if (!text) return <dd className="mt-0.5 italic text-slate-400 dark:text-slate-500">None</dd>
+  if (!text) return <dd className="mt-0.5 italic text-gray-400 dark:text-gray-500">None</dd>
   return <dd className="mt-0.5 whitespace-pre-wrap break-words">{text}</dd>
 }

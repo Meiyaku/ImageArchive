@@ -102,7 +102,7 @@ export function EditAlbumDialog({ album, onSaved, onClose }: EditAlbumDialogProp
         <div>
           <span className="mb-1 block text-sm font-medium">Cover photo</span>
           <div className="flex gap-3">
-            <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-slate-100 text-slate-400 dark:bg-slate-800">
+            <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-gray-100 text-gray-400 dark:bg-gray-800">
               {preparing ? <span className="text-xs">Preparing…</span>
                 : coverSrc ? <img src={coverSrc} alt="Cover" className="h-full w-full object-cover" />
                   : <ImageIcon />}
@@ -125,7 +125,7 @@ export function EditAlbumDialog({ album, onSaved, onClose }: EditAlbumDialogProp
 
         <label className="block">
           <span className="mb-1 block text-sm font-medium">
-            Intro <span className="font-normal text-slate-500 dark:text-slate-400">(optional)</span>
+            Intro <span className="font-normal text-gray-500 dark:text-gray-400">(optional)</span>
           </span>
           <textarea
             className="field min-h-24"
@@ -158,7 +158,7 @@ function CoverChooser({ albumId, onBack, onChoose }: { albumId: number; onBack: 
 
   return (
     <div className="space-y-3">
-      <button type="button" onClick={onBack} className="-ml-1 flex items-center gap-1 text-sm text-indigo-600 dark:text-indigo-400">
+      <button type="button" onClick={onBack} className="-ml-1 flex items-center gap-1 text-sm text-blue-600 dark:text-blue-400">
         <BackIcon width={16} height={16} /> Back
       </button>
       <ErrorBanner message={error} />
@@ -171,7 +171,7 @@ function CoverChooser({ albumId, onBack, onChoose }: { albumId: number; onBack: 
                 type="button"
                 onClick={() => onChoose(item)}
                 aria-label={`Use ${item.title || `item ${item.sequence}`} as cover`}
-                className="block aspect-square w-full overflow-hidden rounded-lg bg-slate-100 ring-indigo-500 focus:ring-2 dark:bg-slate-800"
+                className="block aspect-square w-full overflow-hidden rounded-lg bg-gray-100 ring-blue-500 focus:ring-2 dark:bg-gray-800"
               >
                 <img src={thumbUrl(item.id, item.thumbKey)} alt="" loading="lazy" className="h-full w-full object-cover" />
               </button>

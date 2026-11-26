@@ -36,21 +36,21 @@ export default function AlbumsPage() {
       {!albums && !error && <Spinner />}
       {albums?.length === 0 && (
         <div className="flex flex-col items-center gap-4 py-20 text-center">
-          <ImageIcon width={48} height={48} className="text-slate-400" />
-          <p className="text-slate-500 dark:text-slate-400">You don't have any albums yet.</p>
+          <ImageIcon width={48} height={48} className="text-gray-400" />
+          <p className="text-gray-500 dark:text-gray-400">You don't have any albums yet.</p>
           <button type="button" className="btn-primary" onClick={() => setDialog({ kind: 'create' })}>
             <PlusIcon /> Create an album
           </button>
         </div>
       )}
       {albums && albums.length > 0 && (
-        <ul className="divide-y divide-slate-200 rounded-xl border border-slate-200 bg-white dark:divide-slate-800 dark:border-slate-800 dark:bg-slate-900">
+        <ul className="divide-y divide-gray-200 rounded-xl border border-gray-200 bg-white dark:divide-gray-800 dark:border-gray-800 dark:bg-gray-900">
           {albums.map((album) => {
             const thumb = albumThumbUrl(album)
             return (
             <li key={album.id} className="flex items-center pr-2">
-              <Link to={`/albums/${album.id}`} className="flex min-w-0 flex-1 items-center gap-3 p-3 hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-slate-100 text-slate-400 dark:bg-slate-800">
+              <Link to={`/albums/${album.id}`} className="flex min-w-0 flex-1 items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-gray-100 text-gray-400 dark:bg-gray-800">
                   {thumb ? (
                     <img src={thumb} alt="" className="h-full w-full object-cover" loading="lazy" />
                   ) : (
@@ -59,7 +59,7 @@ export default function AlbumsPage() {
                 </div>
                 <div className="min-w-0">
                   <p className="truncate font-medium">{album.name}</p>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
                     {album.itemCount} {album.itemCount === 1 ? 'item' : 'items'}
                   </p>
                 </div>

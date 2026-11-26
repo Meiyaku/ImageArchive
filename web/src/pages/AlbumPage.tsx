@@ -41,13 +41,13 @@ export default function AlbumPage() {
     >
       <ErrorBanner message={error} />
       {album?.intro && (
-        <p className="mb-4 whitespace-pre-wrap text-slate-600 italic dark:text-slate-400">{album.intro}</p>
+        <p className="mb-4 whitespace-pre-wrap text-gray-600 italic dark:text-gray-400">{album.intro}</p>
       )}
       {!items && !error && <Spinner />}
       {items?.length === 0 && (
         <div className="flex flex-col items-center gap-4 py-20 text-center">
-          <ImageIcon width={48} height={48} className="text-slate-400" />
-          <p className="text-slate-500 dark:text-slate-400">This album is empty.</p>
+          <ImageIcon width={48} height={48} className="text-gray-400" />
+          <p className="text-gray-500 dark:text-gray-400">This album is empty.</p>
           <Link to={addUrl} className="btn-primary"><PlusIcon /> Add an image</Link>
         </div>
       )}
@@ -57,9 +57,9 @@ export default function AlbumPage() {
             <li key={item.id}>
               <Link
                 to={`/albums/${albumId}/items/${item.id}`}
-                className="group block overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"
+                className="group block overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900"
               >
-                <div className="relative aspect-square bg-slate-100 dark:bg-slate-800">
+                <div className="relative aspect-square bg-gray-100 dark:bg-gray-800">
                   {item.thumbKey && (
                     <img
                       src={thumbUrl(item.id, item.thumbKey)}
@@ -76,7 +76,7 @@ export default function AlbumPage() {
                 </div>
                 {/* Caption is the title, or the sequence number for untitled items. */}
                 <p className="truncate px-2.5 py-2 text-sm font-medium">
-                  {item.title || <span className="tabular-nums text-slate-500 dark:text-slate-400">#{item.sequence}</span>}
+                  {item.title || <span className="tabular-nums text-gray-500 dark:text-gray-400">#{item.sequence}</span>}
                 </p>
               </Link>
             </li>

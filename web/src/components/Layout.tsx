@@ -17,10 +17,10 @@ export function Layout({ title, backTo, actions, children }: LayoutProps) {
 
   return (
     <div className="min-h-dvh">
-      <header className="safe-px sticky top-0 z-20 border-b border-slate-200 bg-white/90 pt-[env(safe-area-inset-top)] backdrop-blur dark:border-slate-800 dark:bg-slate-950/90">
+      <header className="safe-px sticky top-0 z-20 border-b border-gray-200 bg-white/90 pt-[env(safe-area-inset-top)] backdrop-blur dark:border-gray-800 dark:bg-gray-950/90">
         <div className="mx-auto flex h-14 max-w-5xl items-center gap-2">
           {backTo && (
-            <Link to={backTo} aria-label="Back" className="-ml-2 rounded-lg p-2 hover:bg-slate-100 dark:hover:bg-slate-800">
+            <Link to={backTo} aria-label="Back" className="-ml-2 rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-gray-800">
               <BackIcon />
             </Link>
           )}
@@ -58,13 +58,13 @@ function UserMenu() {
         aria-label="Account menu"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
-        className="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-600 font-semibold text-white"
+        className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-600 font-semibold text-white"
       >
         {initial}
       </button>
       {open && (
-        <div role="menu" className="absolute right-0 mt-2 w-52 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-lg dark:border-slate-700 dark:bg-slate-900">
-          <p className="truncate px-4 py-2 text-sm text-slate-500 dark:text-slate-400">Signed in as {user.username}</p>
+        <div role="menu" className="absolute right-0 mt-2 w-52 overflow-hidden rounded-xl border border-gray-200 bg-white py-1 shadow-lg dark:border-gray-700 dark:bg-gray-900">
+          <p className="truncate px-4 py-2 text-sm text-gray-500 dark:text-gray-400">Signed in as {user.username}</p>
           <MenuLink onClick={() => navigate('/')}>My albums</MenuLink>
           <MenuLink onClick={() => navigate('/account')}>Change password</MenuLink>
           {user.isAdmin && <MenuLink onClick={() => navigate('/admin')}>Manage users</MenuLink>}
@@ -78,7 +78,7 @@ function UserMenu() {
 
 function MenuLink({ onClick, children }: { onClick: () => void; children: ReactNode }) {
   return (
-    <button type="button" role="menuitem" onClick={onClick} className="block w-full px-4 py-2.5 text-left hover:bg-slate-100 dark:hover:bg-slate-800">
+    <button type="button" role="menuitem" onClick={onClick} className="block w-full px-4 py-2.5 text-left hover:bg-gray-100 dark:hover:bg-gray-800">
       {children}
     </button>
   )

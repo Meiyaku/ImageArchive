@@ -32,14 +32,14 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="safe-px flex min-h-dvh items-center justify-center bg-gradient-to-br from-indigo-600 to-slate-900 py-10">
-      <form onSubmit={submit} className="w-full max-w-sm space-y-5 rounded-2xl bg-white p-6 shadow-xl dark:bg-slate-900">
+    <div className="safe-px flex min-h-dvh items-center justify-center bg-auth-bg-light py-10 dark:bg-auth-bg-dark">
+      <form onSubmit={submit} className="w-full max-w-sm space-y-5 rounded-2xl bg-white p-6 shadow-xl dark:bg-gray-900">
         <div className="flex flex-col items-center gap-2 text-center">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-600 text-white">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-600 text-white">
             <ImageIcon />
           </div>
           <h1 className="text-2xl font-semibold">Image Archive</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400">Sign in to see your albums</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Sign in to see your albums</p>
         </div>
         <label className="block">
           <span className="mb-1 block text-sm font-medium">Username</span>
@@ -67,10 +67,10 @@ export default function LoginPage() {
           />
         </label>
         <ErrorBanner message={error} />
-        <button type="submit" className="btn-primary w-full" disabled={busy}>
+        <button type="submit" className="btn w-full bg-auth-btn-light text-white hover:bg-auth-btn-light-hover dark:bg-auth-btn-dark dark:hover:bg-auth-btn-dark-hover" disabled={busy}>
           {busy ? 'Signing in…' : 'Sign in'}
         </button>
-        <p className="text-center text-xs text-slate-500 dark:text-slate-400">Need an account? Ask your administrator.</p>
+        <p className="text-center text-xs text-gray-500 dark:text-gray-400">Need an account? Ask your administrator.</p>
       </form>
     </div>
   )
