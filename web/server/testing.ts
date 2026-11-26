@@ -10,11 +10,9 @@ import { createPool, migrate, type Pool } from './db.ts'
 /** Boots an in-memory Postgres (PGlite over the wire protocol) plus the app. */
 export async function createTestContext(options: Pick<AppOptions, 'authLimits'> = {}) {
   const db = await PGlite.create()
-  const server = new PGLiteSocketServer({ db, port: 0, host: '127.0.0.1' })
+  const server = new PGLiteSocketServer({ db, port: 0, host: '127.0.0.1', maxConnections: 10 })
   await server.start()
-  const pool: Pool = createPool(`postgres://postgres@${server.getServerConn()}/postgres`,
-    // PGlite's socket server serves one connection at a time; parallel requests queue here instead.
-    1)
+  const pool: Pool = createPool(`postgres://postgres@${server.getServerConn()}/postgres`)
   await migrate(pool)
   const uploadDir = await mkdtemp(path.join(os.tmpdir(), 'imagearchive-test-'))
   const app = createApp({ pool, uploadDir, ...options })

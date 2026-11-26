@@ -31,8 +31,9 @@ npm run deploy         # scripts/deploy.sh: build on the k3s node and roll out (
 
 No Docker or Postgres is needed locally: `npm run dev:db` runs PGlite (Postgres
 compiled to WASM) behind the Postgres wire protocol, persisted in `.devdb/`. Server
-tests do the same in-memory per test file (`server/testing.ts`). PGlite serves one
-connection at a time, so the test pool has `max: 1`.
+tests do the same in-memory per test file (`server/testing.ts`). Both set the socket
+server's `maxConnections: 10` to match the app's pool; its default of 1 makes parallel
+requests fail.
 
 ## Architecture
 
