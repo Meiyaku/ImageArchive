@@ -80,7 +80,7 @@ export function ConfirmDialog({ title, message, confirmLabel, onConfirm, onClose
 
   return (
     <Modal title={title} onClose={onClose}>
-      <p className="mb-4 text-slate-600 dark:text-slate-300">{message}</p>
+      <p className="mb-4 text-gray-600 dark:text-gray-300">{message}</p>
       <ErrorBanner message={error} />
       <div className="mt-4 flex justify-end gap-2">
         <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>

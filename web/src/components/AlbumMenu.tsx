@@ -31,7 +31,7 @@ export function AlbumMenu({ albumName, onEdit, onShare, onDelete }: AlbumMenuPro
     setOpen(false)
     action()
   }
-  const itemClass = 'flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-slate-100 dark:hover:bg-slate-800'
+  const itemClass = 'flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-gray-100 dark:hover:bg-gray-800'
 
   return (
     <div ref={ref} className="relative">
@@ -41,12 +41,12 @@ export function AlbumMenu({ albumName, onEdit, onShare, onDelete }: AlbumMenuPro
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
-        className="flex h-11 w-11 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
+        className="flex h-11 w-11 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
       >
         <MoreIcon />
       </button>
       {open && (
-        <div role="menu" className="absolute right-0 top-full z-30 mt-1 w-48 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-lg dark:border-slate-700 dark:bg-slate-900">
+        <div role="menu" className="absolute right-0 top-full z-30 mt-1 w-48 overflow-hidden rounded-xl border border-gray-200 bg-white py-1 shadow-lg dark:border-gray-700 dark:bg-gray-900">
           <button type="button" role="menuitem" onClick={choose(onEdit)} className={itemClass}>
             <PencilIcon width={18} height={18} /> Edit album
           </button>
