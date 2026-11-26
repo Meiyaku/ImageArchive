@@ -197,6 +197,17 @@ $K logs -f job/backup-now --all-containers                     # watch it
 $K get jobs                                                    # recent runs
 ```
 
+The dump step waits up to 60 s for Postgres (k3s's network policy controller only lets
+a new pod's IP through ~1 s after it starts) and fails, uploading nothing, if `pg_dump`
+fails or its "dump complete" footer is missing. Both containers run as uid 1000 (owner
+of the photo files) with a read-only root filesystem; rclone's `HOME` is an emptyDir `/tmp`.
+
+**Restore test** (no effect on production): `scripts/restore-test/run.sh` runs a backup,
+then starts a throwaway pod that pulls the newest dump and photos from the NAS, loads
+the dump into its own scratch Postgres, and checks every table and photo checksum
+against production. Needs only `kubectl` as `sb` on the node, no sudo. A sign-in during
+the run can make the tables differ; rerun if so.
+
 **Restore** (into the cluster, after copying the files off the NAS to the node):
 
 ```bash
@@ -204,7 +215,7 @@ K='sudo k3s kubectl -n imagearchive'
 $K scale deployment/imagearchive --replicas=0
 # Database: wipe and load the chosen dump.
 $K exec -i postgres-0 -- psql -U imagearchive -d imagearchive -c 'DROP SCHEMA public CASCADE; CREATE SCHEMA public;'
-gunzip -c imagearchive_<date>_<time>.sql.gz | $K exec -i postgres-0 -- psql -U imagearchive -d imagearchive
+gunzip -c imagearchive_<date>_<time>.sql.gz | $K exec -i postgres-0 -- psql -v ON_ERROR_STOP=1 -U imagearchive -d imagearchive
 $K scale deployment/imagearchive --replicas=1
 # Photos: copy the NAS photos/ folder back into the uploads volume.
 POD=$($K get pod -l app=imagearchive -o name | head -1)

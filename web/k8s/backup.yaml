@@ -32,10 +32,21 @@ spec:
             app: imagearchive-backup
         spec:
           restartPolicy: Never
+          # The app's user, which owns the photo files. No fsGroup: the uploads volume is
+          # already owned by this group, and the emptyDirs are world-writable.
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            seccompProfile:
+              type: RuntimeDefault
+          automountServiceAccountToken: false
           # The uploads volume is local to one node; the scheduler places this pod there
           # automatically (local-path volumes carry node affinity).
           volumes:
             - name: work
+              emptyDir: {}
+            - name: tmp
               emptyDir: {}
             - name: uploads
               persistentVolumeClaim:
@@ -55,10 +66,25 @@ spec:
               command: ["sh", "-c"]
               args:
                 - |
-                  set -eu
+                  set -euo pipefail
+                  # k3s's network policy controller lets a new pod's IP through ~1s after the pod
+                  # starts; until then Postgres refuses it, so wait (up to 60s) before dumping.
+                  i=0
+                  until pg_isready -q -h postgres -U imagearchive -d imagearchive -t 2; do
+                    i=$((i + 1))
+                    [ "$i" -lt 30 ] || { echo "Postgres not reachable" >&2; exit 1; }
+                    sleep 2
+                  done
                   pg_dump -h postgres -U imagearchive -d imagearchive --no-owner --no-privileges \
                     | gzip -9 > /work/imagearchive.sql.gz
+                  # pg_dump writes this footer last, so a cut-off dump fails here.
+                  gzip -dc /work/imagearchive.sql.gz | tail -n 5 | grep -q 'PostgreSQL database dump complete'
                   echo "Database dump: $(du -h /work/imagearchive.sql.gz | cut -f1)"
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: ["ALL"]
               volumeMounts:
                 - name: work
                   mountPath: /work
@@ -73,6 +99,8 @@ spec:
             - name: copy-to-nas
               image: rclone/rclone:1.75.2@sha256:2687085f718d3c628f7fdfb77c52a1d344332aed543110bb88088f2c70d43eb5
               env:
+                - name: HOME # rclone wants a writable home for its config/cache lookups
+                  value: /tmp
                 - name: RCLONE_CONFIG_NAS_TYPE
                   value: smb
                 - name: RCLONE_CONFIG_NAS_HOST
@@ -116,10 +144,17 @@ spec:
                   # Only reached if both copies above succeeded (set -e).
                   rclone delete "$dest/database" --min-age 30d --include 'imagearchive_*.sql.gz'
                   echo "Backup complete: $stamp"
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: ["ALL"]
               volumeMounts:
                 - name: work
                   mountPath: /work
                   readOnly: true
+                - name: tmp
+                  mountPath: /tmp
                 - name: uploads
                   mountPath: /data/uploads
                   readOnly: true

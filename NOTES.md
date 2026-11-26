@@ -145,6 +145,22 @@ host hardening default from July, which affects programs on the VM, not containe
 Undo: delete the file and `sudo sysctl -w kernel.apparmor_restrict_unprivileged_unconfined=1`.
 Carry the file into any rebuild of the VM.
 
+## Backup hardening and restore test (2026-11-26)
+
+- **Dump can no longer upload a cut-off file.** The dump step uses `pipefail`, and it checks
+  pg_dump's "dump complete" footer, so a dump that fails partway stops the job
+  before anything reaches the NAS.
+- **No race with the network policy.** It waits up to 60 s for Postgres (k3s only lets a
+  new pod through ~1 s after it starts; this made crafting-catalog's job fail).
+- **Hardened like the app:** both containers run as uid 1000 with a read-only root
+  filesystem, no capabilities and no service account token.
+- Applied to the CronJob (nothing restarted). A backup run by hand ended "Backup complete".
+- **Restore tested** with `web/scripts/restore-test/run.sh`, which never touches
+  production. It restored the newest NAS backup into a scratch Postgres: every table
+  matched production byte for byte, every photo the database refers to was on the NAS,
+  and all 6 photo files matched the live volume. Rerun it now and then, or after
+  changing the backup job.
+
 ## Key decisions
 
 - **Deploy like movietracker:** `web/scripts/deploy.sh` copies the source to the node
@@ -169,7 +185,9 @@ Carry the file into any rebuild of the VM.
 
 ## Open items
 
-- **Test a restore** once the first backup has run, so the procedure is proven.
+- **Shared NAS login.** Crafting-catalog's backup (`crafting-catalog/backup-smb` Secret) uses
+  a copy of `imagearchive-backup-smb`. If that NAS password changes, update both Secrets
+  (and `kube-system/k3s-backup-smb`, if it's the same account).
 
 - **HTTPS.** The ingress is plain HTTP, like movietracker, so passwords and notes
   travel unencrypted. Add TLS (cert-manager or a Traefik resolver) before real use —
