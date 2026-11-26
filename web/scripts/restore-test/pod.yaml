@@ -1,0 +1,83 @@
+# Throwaway restore-test pod, started by run.sh: pulls the newest dump + photos from the NAS
+# into an emptyDir and runs a scratch Postgres to load it into. Touches nothing in production.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: restore-test
+  namespace: imagearchive
+  labels:
+    app: imagearchive-restore-test
+spec:
+  restartPolicy: Never
+  automountServiceAccountToken: false
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 70
+    runAsGroup: 70
+    seccompProfile:
+      type: RuntimeDefault
+  volumes:
+    - name: restore
+      emptyDir: {}
+    - name: tmp
+      emptyDir: {}
+    - name: pgdata
+      emptyDir: {}
+    - name: run
+      emptyDir: {}
+  initContainers:
+    - name: fetch-from-nas
+      image: rclone/rclone:1.75.2@sha256:2687085f718d3c628f7fdfb77c52a1d344332aed543110bb88088f2c70d43eb5
+      command: ["sh", "-c"]
+      args:
+        - |
+          set -eu
+          export RCLONE_CONFIG_NAS_USER="$SMB_USER"
+          RCLONE_CONFIG_NAS_PASS="$(rclone obscure "$SMB_PASSWORD")"
+          export RCLONE_CONFIG_NAS_PASS
+          if [ -n "${SMB_DOMAIN:-}" ]; then export RCLONE_CONFIG_NAS_DOMAIN="$SMB_DOMAIN"; fi
+          src="nas:K3S_Backups/imagearchive"
+          latest="$(rclone lsf "$src/database" --include 'imagearchive_*.sql.gz' | sort | tail -n 1)"
+          echo "Newest dump: $latest"
+          rclone copyto "$src/database/$latest" /restore/dump.sql.gz
+          echo "$latest" > /restore/dump-name
+          rclone copy "$src/photos" /restore/photos
+          echo "Fetched $(ls /restore/photos | wc -l) photo files"
+      env:
+        - name: HOME
+          value: /tmp
+        - name: RCLONE_CONFIG_NAS_TYPE
+          value: smb
+        - name: RCLONE_CONFIG_NAS_HOST
+          value: "192.168.10.20"
+        - name: SMB_USER
+          valueFrom: {secretKeyRef: {name: imagearchive-backup-smb, key: SMB_USER}}
+        - name: SMB_PASSWORD
+          valueFrom: {secretKeyRef: {name: imagearchive-backup-smb, key: SMB_PASSWORD}}
+        - name: SMB_DOMAIN
+          valueFrom: {secretKeyRef: {name: imagearchive-backup-smb, key: SMB_DOMAIN, optional: true}}
+      securityContext:
+        allowPrivilegeEscalation: false
+        readOnlyRootFilesystem: true
+        capabilities: {drop: ["ALL"]}
+      volumeMounts:
+        - {name: restore, mountPath: /restore}
+        - {name: tmp, mountPath: /tmp}
+  containers:
+    - name: db
+      image: postgres:17-alpine@sha256:f9cf3e1f0066f0eb0c48707d864f0ac5941e9ff454a072077d97a4d278d07d73
+      env:
+        - {name: POSTGRES_USER, value: imagearchive}
+        - {name: POSTGRES_DB, value: imagearchive}
+        - {name: POSTGRES_HOST_AUTH_METHOD, value: trust}
+        - {name: PGDATA, value: /var/lib/postgresql/data/pgdata}
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities: {drop: ["ALL"]}
+      volumeMounts:
+        - {name: restore, mountPath: /restore}
+        - {name: pgdata, mountPath: /var/lib/postgresql/data}
+        - {name: run, mountPath: /var/run/postgresql}
+      resources:
+        requests: {cpu: 50m, memory: 64Mi}
+        limits: {memory: 512Mi}
